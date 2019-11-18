@@ -2,9 +2,9 @@ module Latte.AbsLatte where
 
 type ErrPos = Maybe (Int, Int)
 
-showPos :: ErrPos -> String
-showPos Nothing = ""
-showPos (Just (l, p)) = "Line " ++ (show l) ++ " [" ++ (show p) ++ "]:"
+showErrorPos :: ErrPos -> String
+showErrorPos Nothing = ""
+showErrorPos (Just (l, p)) = "Line " ++ (show l) ++ " [" ++ (show p) ++ "]: "
 
 newtype Ident = Ident String deriving (Eq, Ord, Show, Read)
 data Program a = Program a [TopDef a]
