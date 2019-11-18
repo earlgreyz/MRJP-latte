@@ -12,14 +12,13 @@ import Latte.SkelLatte
 import Latte.PrintLatte
 import Latte.AbsLatte
 import Latte.ErrM
-
-import qualified Data.Map as M
+import Latte.ErrLatte
 
 import Analyzer.Analyzer
 
-type ParseFun = [Token] -> Err (Program ErrPos)
-
 myLLexer = myLexer
+
+type ParseFun = [Token] -> Err (Program ErrPos)
 
 runFile :: ParseFun -> FilePath -> IO ()
 runFile p f = readFile f >>= run p f

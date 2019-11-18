@@ -1,10 +1,6 @@
 module Latte.AbsLatte where
 
-type ErrPos = Maybe (Int, Int)
-
-showErrorPos :: ErrPos -> String
-showErrorPos Nothing = ""
-showErrorPos (Just (l, p)) = "Line " ++ (show l) ++ " [" ++ (show p) ++ "]: "
+import Data.List
 
 newtype Ident = Ident String deriving (Eq, Ord, Show, Read)
 data Program a = Program a [TopDef a]
@@ -67,9 +63,26 @@ instance Functor Item where
     fmap f x = case x of
         NoInit a ident -> NoInit (f a) ident
         Init a ident expr -> Init (f a) ident (fmap f expr)
+
 data Type a
     = Int a | Str a | Bool a | Void a | Fun a (Type a) [Type a]
-  deriving (Eq, Ord, Show, Read)
+    deriving (Ord, Read)
+
+-- Custom definition for type equality.
+instance Eq (Type a) where
+    (Int _) == (Int _) = True
+    (Str _) == (Str _) = True
+    (Bool _) == (Bool _) = True
+    (Void _) == (Void _) = True
+    (Fun _ r t) == (Fun _ rr tt) = (r == rr) && (all (\(x, y) -> x == y) $ zip t tt)
+    _ == _ = False
+
+instance Show (Type a) where
+    show (Int _) = "int"
+    show (Str _) = "str"
+    show (Bool _) = "bool"
+    show (Void _) = "void"
+    show (Fun _ r t) = (show r) ++ "(" ++ (intercalate ", " $ map show t) ++ ")"
 
 instance Functor Type where
     fmap f x = case x of
@@ -78,6 +91,7 @@ instance Functor Type where
         Bool a -> Bool (f a)
         Void a -> Void (f a)
         Fun a type_ types -> Fun (f a) (fmap f type_) (map (fmap f) types)
+
 data Expr a
     = EVar a Ident
     | ELitInt a Integer
