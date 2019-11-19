@@ -14,7 +14,7 @@ import Latte.AbsLatte
 import Latte.ErrM
 import Latte.ErrLatte
 
-import Analyzer.Analyzer
+import Analyzer.Main
 
 myLLexer = myLexer
 
