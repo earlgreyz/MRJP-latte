@@ -9,6 +9,8 @@ import Data.List
 import Latte.AbsLatte
 import Latte.ErrLatte
 
+import Analyzer.Error
+
 type AnalyzerType = (Bool, Type ErrPos)
 type Env = M.Map Ident AnalyzerType
 type Analyzer = ReaderT Env (ExceptT String IO)
@@ -20,17 +22,6 @@ returnIdent = Ident "return"
 -- Helper function to show errors.
 throwAnalyzerError :: ErrPos -> String -> Analyzer a
 throwAnalyzerError a s = throwError $ (showErrPos a) ++ s
-
-throwRedeclaredError :: ErrPos -> Ident -> ErrPos -> Analyzer a
-throwRedeclaredError a x b = throwError $ intercalate " " [
-  (showErrPos a), (show x),
-  "already declared in this block, previous declaration", (showErrPos b)]
-
-throwTypeMismatchError :: Type ErrPos -> Ident -> Type ErrPos -> Analyzer a
-throwTypeMismatchError tt x t = throwError $ intercalate " " [
-  (showErrPos $ getTypeErrPos tt),
-  "cannot assign expression of type", (show tt),
-  "to", (show x), "of type", (show t)]
 
 -- Runs analyzer with starting environment.
 runAnalyzer :: (Program ErrPos) -> ExceptT String IO ()
@@ -68,24 +59,33 @@ analyzeManyStmt (s:ss) = do
   env <- analyzeStmt s
   local (\_ -> env) $ analyzeManyStmt ss
 
-checkNotRedeclared :: ErrPos -> Ident -> Analyzer ()
-checkNotRedeclared a x = do
+-- Assert identifier has not been declared in the current block.
+assertNotRedeclared :: ErrPos -> Ident -> Analyzer ()
+assertNotRedeclared a x = do
   env <- ask
   case M.lookup x env of
-    Just (True, tt) -> throwRedeclaredError a x (getTypeErrPos tt)
+    Just (True, tt) -> throwError $ redeclaredError a x (getTypeErrPos tt)
     _ -> return ()
 
+-- Add variable to the current environment.
 declare :: Type ErrPos -> Item ErrPos -> Analyzer Env
 declare t (NoInit a x) = do
   env <- ask
-  checkNotRedeclared a x
+  assertNotRedeclared a x
   return $ M.insert x (True, t) env
 declare t (Init a x e) = do
   env <- ask
-  checkNotRedeclared a x
+  assertNotRedeclared a x
   tt <- analyzeExpr e
-  unless (t == tt) $ throwTypeMismatchError tt x t
+  unless (t == tt) $ throwError $ typeMismatchError tt x t
   return $ M.insert x (True, t) env
+
+mustLookup :: ErrPos -> Ident -> Analyzer (Type ErrPos)
+mustLookup a x = do
+  env <- ask
+  case M.lookup x env of
+    Nothing -> throwError $ undefinedError a x
+    Just (_, t) -> return t
 
 analyzeStmt :: (Stmt ErrPos) -> Analyzer Env
 analyzeStmt (Empty _) = ask
@@ -94,6 +94,11 @@ analyzeStmt (Decl _ t []) = ask
 analyzeStmt (Decl a t (x:xs)) = do
   env <- declare t x
   local (\_ -> env) $ analyzeStmt (Decl a t xs)
+analyzeStmt (Ass a x e) = do
+  t <- mustLookup a x
+  tt <- analyzeExpr e
+  unless (t == tt) $ throwError $ typeMismatchError tt x t
+  ask
 -- TODO: REMOVE! Just for development
 analyzeStmt _ = throwError $ "Not implemented yet!"
 
