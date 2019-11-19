@@ -19,3 +19,18 @@ typeMismatchError tt x t = intercalate " " [
 undefinedError :: ErrPos -> Ident -> String
 undefinedError a x = intercalate " " [
   (showErrPos a), (show x), "was not defined in this scope"]
+
+functionError :: ErrPos -> Ident -> Type ErrPos -> String
+functionError a f t = intercalate " " [
+  (showErrPos a), "cannot use", (show f), (showErrPos $ getTypeErrPos t),
+  "of type", (show t), "as a function"]
+
+argumentsError :: ErrPos -> Ident -> [Type ErrPos] -> [Type ErrPos] -> String
+argumentsError a f ts tts = intercalate " " [
+  (showErrPos a), "invalid arguments for function", (show f),
+  "expected", (show ts), "but got", (show tts), "instead"]
+
+typeExpectedError :: ErrPos -> Type ErrPos -> Type ErrPos -> String
+typeExpectedError a t tt = intercalate " " [
+  (showErrPos a), "expected negated expression to be of type", (show t),
+  "but got", (show tt), "instead"]
