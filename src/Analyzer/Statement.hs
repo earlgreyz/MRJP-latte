@@ -58,6 +58,12 @@ declare t (Init a x e) = do
   unless (t == tt) $ throwError $ typeMismatchError tt x t
   return $ M.insert x (True, t) env
 
+analyzeReturn :: ErrPos -> Type ErrPos -> Analyzer Env
+analyzeReturn a tt = do
+  t <- mustLookup a returnIdent
+  unless (t == tt) $ throwError $ typeExpectedError a t tt
+  ask
+
 analyzeStmt :: (Stmt ErrPos) -> Analyzer Env
 analyzeStmt (Empty _) = ask
 analyzeStmt (BStmt _ b) = analyzeBlock b >> ask
@@ -70,5 +76,21 @@ analyzeStmt (Ass a x e) = do
   tt <- analyzeExpr e
   unless (t == tt) $ throwError $ typeMismatchError tt x t
   ask
--- TODO: REMOVE! Just for development
-analyzeStmt _ = throwError $ "Not implemented yet!"
+analyzeStmt (Incr a x) = do
+  t <- mustLookup a x
+  unless (t == (Int Nothing)) $ throwError $ intExpectedError a x t
+  ask
+analyzeStmt (Decr a x) = analyzeStmt $ Incr a x
+analyzeStmt (Ret a e) = do
+  tt <- analyzeExpr e
+  analyzeReturn a tt
+analyzeStmt (VRet a) = analyzeReturn a (Void Nothing)
+analyzeStmt (CondElse a e st sf) = do
+  tt <- analyzeExpr e
+  assertType a (Bool Nothing) tt
+  analyzeStmt st
+  analyzeStmt sf
+  ask
+analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
+analyzeStmt (While a e s) = analyzeStmt (Cond a e s)
+analyzeStmt (SExp a e) = analyzeExpr e >> ask

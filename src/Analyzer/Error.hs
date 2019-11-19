@@ -32,5 +32,10 @@ argumentsError a f ts tts = intercalate " " [
 
 typeExpectedError :: ErrPos -> Type ErrPos -> Type ErrPos -> String
 typeExpectedError a t tt = intercalate " " [
-  (showErrPos a), "expected negated expression to be of type", (show t),
+  (showErrPos a), "expected expression to be of type", (show t),
   "but got", (show tt), "instead"]
+
+intExpectedError :: ErrPos -> Ident -> Type ErrPos -> String
+intExpectedError a x t = intercalate " " [
+  (showErrPos a), "expected variable to be of type int, but got",
+  (show x), "of type", (show t)]
