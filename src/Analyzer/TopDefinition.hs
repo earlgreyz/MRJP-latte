@@ -23,6 +23,7 @@ insertArgs :: [Arg ErrPos] -> Analyzer Env
 insertArgs [] = ask
 insertArgs ((Arg a t arg):args) = do
   env <- ask
+  when (t == Void Nothing) $ throwError $ voidArgumentError a arg
   case M.lookup arg env of
     Just (True, tt) -> throwError $ redeclaredError a arg (getTypeErrPos tt)
     _ -> local (\_ -> M.insert arg (True, t) env) $ insertArgs args

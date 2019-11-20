@@ -55,3 +55,7 @@ missingReturnError a f = intercalate " " [
 overflowError :: ErrPos -> Integer -> String
 overflowError a n = intercalate " " [
   (showErrPos a), "invalid integer constant value", (show n), "(overflow)"]
+
+voidArgumentError :: ErrPos -> Ident -> String
+voidArgumentError a x = intercalate " " [
+  (showErrPos a), "argument", (showIdent x), "has invalid type void"]
