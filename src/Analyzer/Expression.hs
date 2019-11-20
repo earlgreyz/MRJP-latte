@@ -27,7 +27,9 @@ analyzeBinaryExpr e f t = do
 
 analyzeExpr :: (Expr ErrPos) -> Analyzer (Type ErrPos)
 analyzeExpr (EVar a x) = mustLookup a x
-analyzeExpr (ELitInt a _) = return $ Int a
+analyzeExpr (ELitInt a n) = do
+  unless (n >= -2147483648 && n < 2147483647) $ throwError $ overflowError a n
+  return $ Int a
 analyzeExpr (ELitTrue a) = return $ Bool a
 analyzeExpr (ELitFalse a) = return $ Bool a
 analyzeExpr (EApp a f args) = do

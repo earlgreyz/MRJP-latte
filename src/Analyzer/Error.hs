@@ -51,3 +51,7 @@ intExpectedError a x t = intercalate " " [
 missingReturnError :: ErrPos -> Ident -> String
 missingReturnError a f = intercalate " " [
   (showErrPos a), "non-void function", (showIdent f), "missing a return statement"]
+
+overflowError :: ErrPos -> Integer -> String
+overflowError a n = intercalate " " [
+  (showErrPos a), "invalid integer constant value", (show n), "(overflow)"]
