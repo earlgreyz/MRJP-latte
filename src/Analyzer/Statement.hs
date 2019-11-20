@@ -14,11 +14,6 @@ import Analyzer.Error
 import Analyzer.Expression
 import Analyzer.Util
 
--- Insert arguments into the environment.
-insertArgs :: [Arg ErrPos] -> Env -> Env
-insertArgs args env = foldr insertArg env args where
-  insertArg (Arg _ t arg) env = M.insert arg (True, t) env
-
 -- Special marker for the return environment.
 returnIdent :: Ident
 returnIdent = Ident "return"
