@@ -15,6 +15,8 @@ import Analyzer.Error
 import Analyzer.Expression
 import Analyzer.Util
 
+import Eval.Expression
+
 -- Special marker for the return environment.
 returnIdent :: Ident
 returnIdent = Ident "return"
@@ -56,7 +58,15 @@ analyzeReturn a tt = do
   modify $ \_ -> True
   ask
 
-analyzeStmt :: (Stmt ErrPos) -> Analyzer Env
+analyzeCond :: Stmt ErrPos -> Analyzer ()
+analyzeCond s = do
+  ret <- get -- Return already called.
+  modify $ \_ -> False
+  analyzeStmt s
+  sret <- get
+  modify $ \_ -> ret || sret
+
+analyzeStmt :: Stmt ErrPos -> Analyzer Env
 analyzeStmt (Empty _) = ask
 analyzeStmt (BStmt _ b) = analyzeBlock b >> ask
 analyzeStmt (Decl _ t []) = ask
@@ -77,19 +87,16 @@ analyzeStmt (Ret a e) = do
   tt <- analyzeExpr e
   analyzeReturn a tt
 analyzeStmt (VRet a) = analyzeReturn a (Void Nothing)
-analyzeStmt (CondElse a e st sf) = do
-  ret <- get -- Return already called.
-  tt <- analyzeExpr e
-  assertType a (Bool Nothing) tt
-  -- Check true path.
-  modify $ \_ -> False
-  analyzeStmt st
-  tret <- get -- True path returned.
-  -- Check false path.
-  modify $ \_ -> False
-  analyzeStmt sf
-  fret <- get -- False path returned.
-  modify $ \_ -> ret || (tret && fret)
+analyzeStmt (CondElse _ e st sf) = do
+  case tryEval e of
+    Just (EVBool True) -> do
+      analyzeCond st
+    Just (EVBool False) -> do
+      analyzeCond sf
+    _ -> do
+      analyzeExpr e
+      analyzeCond st
+      analyzeCond sf
   ask
 analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
 analyzeStmt (While a e s) = analyzeStmt (Cond a e s)
