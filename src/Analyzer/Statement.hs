@@ -4,6 +4,7 @@ import qualified Data.Map as M
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 
 import Latte.AbsLatte
 import Latte.ErrLatte
@@ -52,6 +53,7 @@ analyzeReturn :: ErrPos -> Type ErrPos -> Analyzer Env
 analyzeReturn a tt = do
   t <- mustLookup a returnIdent
   unless (t == tt) $ throwError $ typeExpectedError a t tt
+  modify $ \_ -> True
   ask
 
 analyzeStmt :: (Stmt ErrPos) -> Analyzer Env
@@ -76,10 +78,18 @@ analyzeStmt (Ret a e) = do
   analyzeReturn a tt
 analyzeStmt (VRet a) = analyzeReturn a (Void Nothing)
 analyzeStmt (CondElse a e st sf) = do
+  ret <- get -- Return already called.
   tt <- analyzeExpr e
   assertType a (Bool Nothing) tt
+  -- Check true path.
+  modify $ \_ -> False
   analyzeStmt st
+  tret <- get -- True path returned.
+  -- Check false path.
+  modify $ \_ -> False
   analyzeStmt sf
+  fret <- get -- False path returned.
+  modify $ \_ -> ret || (tret && fret)
   ask
 analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
 analyzeStmt (While a e s) = analyzeStmt (Cond a e s)

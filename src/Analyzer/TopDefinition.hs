@@ -4,6 +4,7 @@ import qualified Data.Map as M
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 
 import Latte.AbsLatte
 import Latte.ErrLatte
@@ -38,6 +39,9 @@ defineManyTopDef ((FnDef a r f args _):ds) = do
   local (\env -> M.insert f (True, ft) env) $ defineManyTopDef ds
 
 analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
-analyzeTopDef (FnDef _ t f args block) = do
+analyzeTopDef (FnDef a t f args block) = do
+  modify $ \_ -> False
   env <- local (\env -> startBlock env) $ insertArgs args
   local (\_ -> insertRet t env) $ analyzeBlock block
+  ret <- get
+  unless (t == Void Nothing || ret) $ throwError $ missingReturnError a f
