@@ -9,11 +9,13 @@ import Latte.AbsLatte
 import Latte.ErrLatte
 
 import Analyzer.Analyzer
-import Analyzer.Statement
+import Analyzer.TopDefinition
 
 -- Runs analyzer with starting environment.
 runAnalyzer :: (Program ErrPos) -> ExceptT String IO ()
 runAnalyzer p = runReaderT (analyze p) M.empty
 
 analyze :: (Program ErrPos) -> Analyzer ()
-analyze (Program _ ts) = mapM_ analyzeTopDef ts
+analyze (Program _ ts) = do
+  env <- defineManyTopDef ts
+  local (\_ -> env) $ mapM_ analyzeTopDef ts

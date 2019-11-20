@@ -27,11 +27,6 @@ returnIdent = Ident "return"
 insertRet :: (Type ErrPos) -> Env -> Env
 insertRet t env = M.insert returnIdent (True, t) env
 
-analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
-analyzeTopDef (FnDef _ t f args block) =
-  -- TODO: check if argument names are unique.
-  local (\env -> insertRet t (insertArgs args env)) $ analyzeBlock block
-
 -- Change _declared in current block_ to false.
 startBlock :: Env -> Env
 startBlock env = M.map (\(_, t) -> (False, t)) env
