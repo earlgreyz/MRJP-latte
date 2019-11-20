@@ -35,6 +35,11 @@ typeExpectedError a t tt = intercalate " " [
   (showErrPos a), "expected expression to be of type", (show t),
   "but got", (show tt), "instead"]
 
+oneOfTypeExpectedError :: ErrPos -> [Type ErrPos] -> Type ErrPos -> String
+oneOfTypeExpectedError a ts t = intercalate " " [
+  (showErrPos a), "expected expression to be one of type", (show ts),
+  "but got", (show t), "instead"]
+
 intExpectedError :: ErrPos -> Ident -> Type ErrPos -> String
 intExpectedError a x t = intercalate " " [
   (showErrPos a), "expected variable to be of type int, but got",

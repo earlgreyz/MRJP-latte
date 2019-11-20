@@ -39,12 +39,25 @@ analyzeExpr (EApp a f args) = do
       return r
     tt -> throwError $ functionError a f tt
 analyzeExpr (EString a _) = return $ Str a
-analyzeExpr (Neg _ e) = analyzeUnaryExpr e (Int Nothing)
-analyzeExpr (Not _ e) = analyzeUnaryExpr e (Bool Nothing)
-analyzeExpr (EMul _ e _ f) = analyzeBinaryExpr e f (Int Nothing)
-analyzeExpr (EAdd _ e _ f) = analyzeBinaryExpr e f (Int Nothing)
-analyzeExpr (ERel _ e _ f) = do
-  t <- analyzeBinaryExpr e f (Int Nothing)
-  return $ Bool (getTypeErrPos t)
-analyzeExpr (EAnd _ e f) = analyzeBinaryExpr e f (Bool Nothing)
-analyzeExpr (EOr _ e f) = analyzeBinaryExpr e f (Bool Nothing)
+analyzeExpr (Neg a e) = analyzeUnaryExpr e (Int a)
+analyzeExpr (Not a e) = analyzeUnaryExpr e (Bool a)
+analyzeExpr (EMul a e _ f) = analyzeBinaryExpr e f (Int a)
+analyzeExpr (EAdd a e op f) = case op of
+  Plus _ -> do
+    te <- analyzeExpr e
+    assertOneOfType (getExprErrPos e) [Int Nothing, Str Nothing] te
+    tf <- analyzeExpr f
+    assertType (getExprErrPos f) te tf
+    return $ fmap (\_ -> a) te
+  Minus _ -> analyzeBinaryExpr e f (Int Nothing)
+analyzeExpr (ERel a e op f) = case op of
+  EQU _ -> do
+    te <- analyzeExpr e
+    tf <- analyzeExpr f
+    assertType (getExprErrPos f) te tf
+    return $ Bool a
+  _ -> do
+    analyzeBinaryExpr e f (Int Nothing)
+    return $ Bool a
+analyzeExpr (EAnd a e f) = analyzeBinaryExpr e f (Bool a)
+analyzeExpr (EOr a e f) = analyzeBinaryExpr e f (Bool a)

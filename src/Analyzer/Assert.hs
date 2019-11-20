@@ -23,3 +23,8 @@ assertNotRedeclared a x = do
 assertType :: ErrPos -> Type ErrPos -> Type ErrPos -> Analyzer ()
 assertType a t tt = do
   unless (t == tt) $ throwError $ typeExpectedError a t tt
+
+-- Assert type matches one of the required type.
+assertOneOfType :: ErrPos -> [Type ErrPos] -> Type ErrPos -> Analyzer ()
+assertOneOfType a ts t = do
+  unless (any ((==) t) ts) $ throwError $ oneOfTypeExpectedError a ts t
