@@ -70,7 +70,8 @@ analyzeStmt :: Stmt ErrPos -> Analyzer Env
 analyzeStmt (Empty _) = ask
 analyzeStmt (BStmt _ b) = analyzeBlock b >> ask
 analyzeStmt (Decl _ t []) = ask
-analyzeStmt (Decl _ t (x:xs)) = do
+analyzeStmt (Decl a t (x:xs)) = do
+  when (t == Void Nothing) $ throwError $ voidDeclarationError a
   env <- declare t x
   local (\_ -> env) $ analyzeStmt (Decl Nothing t xs)
 analyzeStmt (Ass a x e) = do

@@ -59,3 +59,6 @@ overflowError a n = intercalate " " [
 voidArgumentError :: ErrPos -> Ident -> String
 voidArgumentError a x = intercalate " " [
   (showErrPos a), "argument", (showIdent x), "has invalid type void"]
+
+voidDeclarationError :: ErrPos -> String
+voidDeclarationError a = (showErrPos a) ++ "void type cannot be used as a variable"
