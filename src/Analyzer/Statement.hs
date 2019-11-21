@@ -58,13 +58,12 @@ analyzeReturn a tt = do
   modify $ \_ -> True
   ask
 
-analyzeCond :: Stmt ErrPos -> Analyzer ()
+analyzeCond :: Stmt ErrPos -> Analyzer Bool
 analyzeCond s = do
-  ret <- get -- Return already called.
   modify $ \_ -> False
   analyzeStmt s
   sret <- get
-  modify $ \_ -> ret || sret
+  return sret
 
 analyzeStmt :: Stmt ErrPos -> Analyzer Env
 analyzeStmt (Empty _) = ask
@@ -89,15 +88,19 @@ analyzeStmt (Ret a e) = do
   analyzeReturn a tt
 analyzeStmt (VRet a) = analyzeReturn a (Void Nothing)
 analyzeStmt (CondElse _ e st sf) = do
+  ret <- get -- Return already called.
   case tryEval e of
     Just (EVBool True) -> do
-      analyzeCond st
+      tret <- analyzeCond st
+      modify $ \_ -> ret || tret
     Just (EVBool False) -> do
-      analyzeCond sf
+      fret <- analyzeCond sf
+      modify $ \_ -> ret || fret
     _ -> do
       analyzeExpr e
-      analyzeCond st
-      analyzeCond sf
+      tret <- analyzeCond st
+      fret <- analyzeCond sf
+      modify $ \_ -> ret || (tret && fret)
   ask
 analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
 analyzeStmt (While a e s) = analyzeStmt (Cond a e s)
