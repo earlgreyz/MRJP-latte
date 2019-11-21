@@ -61,4 +61,12 @@ voidArgumentError a x = intercalate " " [
   (showErrPos a), "argument", (showIdent x), "has invalid type void"]
 
 voidDeclarationError :: ErrPos -> String
-voidDeclarationError a = (showErrPos a) ++ "void type cannot be used as a variable"
+voidDeclarationError a = (showErrPos a) ++ " void type cannot be used as a variable"
+
+missingMainError :: String
+missingMainError = "[0:0] missing main function"
+
+invalidMainTypeError :: Type ErrPos -> String
+invalidMainTypeError t = intercalate " " [
+  (showErrPos $ getTypeErrPos t), "expected main to be of type int()",
+  "but got", (show t), "instead"]

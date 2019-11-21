@@ -10,6 +10,7 @@ import Latte.AbsLatte
 import Latte.ErrLatte
 
 import Analyzer.Analyzer
+import Analyzer.Error
 import Analyzer.TopDefinition
 
 -- Create a function header.
@@ -27,6 +28,12 @@ functions = M.fromList [
   function (Int ()) "readInt" [],
   function (Str ()) "readString" []]
 
+mainIdent :: Ident
+mainIdent = Ident "main"
+
+mainType :: Type ErrPos
+mainType = let (_, (_, t)) = function (Int ()) "main" [] in t
+
 -- Runs analyzer with starting environment.
 runAnalyzer :: (Program ErrPos) -> ExceptT String IO ()
 runAnalyzer p = flip evalStateT False $ flip runReaderT functions $ analyze p
@@ -34,4 +41,7 @@ runAnalyzer p = flip evalStateT False $ flip runReaderT functions $ analyze p
 analyze :: (Program ErrPos) -> Analyzer ()
 analyze (Program _ ts) = do
   env <- defineManyTopDef ts
+  case M.lookup mainIdent env of
+    Nothing -> throwError $ missingMainError
+    Just (_, t) -> unless (t == mainType) $ throwError $ invalidMainTypeError t
   local (\_ -> env) $ mapM_ analyzeTopDef ts

@@ -74,7 +74,7 @@ instance Eq (Type a) where
     (Str _) == (Str _) = True
     (Bool _) == (Bool _) = True
     (Void _) == (Void _) = True
-    (Fun _ r t) == (Fun _ rr tt) = (r == rr) && (all (\(x, y) -> x == y) $ zip t tt)
+    (Fun _ r t) == (Fun _ rr tt) = (r == rr) && (t == tt)
     _ == _ = False
 
 instance Show (Type a) where
