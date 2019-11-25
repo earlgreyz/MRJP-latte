@@ -15,7 +15,8 @@ import Analyzer.Error
 import Analyzer.Expression
 import Analyzer.Util
 
-import Eval.Expression
+import Evaluate.Expression
+import Evaluate.Value
 
 -- Special marker for the return environment.
 returnIdent :: Ident
@@ -90,10 +91,10 @@ analyzeStmt (VRet a) = analyzeReturn a (Void Nothing)
 analyzeStmt (CondElse _ e st sf) = do
   ret <- get -- Return already called.
   case tryEval e of
-    Just (EVBool True) -> do
+    Just (VBool True) -> do
       tret <- analyzeCond st
       modify $ \_ -> ret || tret
-    Just (EVBool False) -> do
+    Just (VBool False) -> do
       fret <- analyzeCond sf
       modify $ \_ -> ret || fret
     _ -> do
