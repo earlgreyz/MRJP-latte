@@ -1,6 +1,9 @@
 module Evaluate.Value where
 
-data Value = VInt Integer | VBool Bool | VString String
+data Value
+  = VInt Integer
+  | VBool Bool
+  | VString String
 
 instance Eq Value where
   (VInt n) == (VInt m) = n == m
