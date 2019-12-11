@@ -36,9 +36,16 @@ compileExpr (L.EString _ s) = do
   c <- newConstant s
   return (Ptr Ti8, VConst c)
 compileExpr (L.Neg _ e) = case tryEval e of
-  Just (E.VInt n) -> return (Ti32, VInt n)
+  Just (E.VInt n) -> return (Ti32, VInt $ -n)
   Nothing -> do
     (t, v) <- compileExpr e
     reg <- freshTemp
     emitInstruction $ IArithm Ti32 (VInt 0) v OpSub reg
+    return (t, VReg reg)
+compileExpr (L.Not _ e) = case tryEval e of
+  Just (E.VBool b) -> return (Ti1, VBool $ not b)
+  Nothing -> do
+    (t, v) <- compileExpr e
+    reg <- freshTemp
+    emitInstruction $ IIcmp Ti1 (VBool False) v RelOpEQ reg
     return (t, VReg reg)
