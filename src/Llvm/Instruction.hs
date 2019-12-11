@@ -15,7 +15,7 @@ data Value = VInt Integer | VReg Register | VBool Bool | VConst Constant derivin
 data Instruction
   = ICall Type String [(Type, Value)] (Maybe Register)
   | IRet Type Value
-  | IArithm Type Value Value ArithmOp Register
+  | IArithm Value Value ArithmOp Register
   | IBr Label
   | IBrCond Type Value Label Label
   | ILabel Label
@@ -30,7 +30,7 @@ data Instruction
   | ISext (Type, Value) Type Register
   deriving Eq
 -- Operations in LLVM.
-data ArithmOp = OpAdd | OpSub | OpMul | OpSDiv | OpSRem deriving Eq
+data ArithmOp = OpAdd | OpSub | OpMul | OpDiv | OpMod deriving Eq
 data Cond = CondEQ | CondNE | CondSGT | CondSGE | CondSLT | CondSLE deriving Eq
 
 -- Block of instructions.
@@ -54,6 +54,10 @@ nextLabel (Label l) = Label $ l + 1
 
 getConstantIdent :: Constant -> Integer
 getConstantIdent (Constant c _) = c
+
+isConstant :: Value -> Bool
+isConstant (VConst _) = True
+isConstant _ = False
 
 convertType :: L.Type a -> Type
 convertType t = case t of
