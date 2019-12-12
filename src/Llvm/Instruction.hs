@@ -52,13 +52,6 @@ nextRegister (Register r) = Register $ r + 1
 nextLabel :: Label -> Label
 nextLabel (Label l) = Label $ l + 1
 
-getConstantIdent :: Constant -> Integer
-getConstantIdent (Constant c _) = c
-
-isConstant :: Value -> Bool
-isConstant (VConst _) = True
-isConstant _ = False
-
 convertType :: L.Type a -> Type
 convertType t = case t of
   L.Void _ -> Tvoid
