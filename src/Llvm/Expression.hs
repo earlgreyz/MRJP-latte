@@ -10,12 +10,14 @@ import qualified Evaluate.Value as E
 import Llvm.Compiler
 import Llvm.Instruction
 
+-- Constatnts - library function identifiers.
 stringsConcatIdent :: String
 stringsConcatIdent = "stringsConcat"
 
 stringsEqualIdent :: String
 stringsEqualIdent = "stringsEqual"
 
+-- Compiles expression simplifying constants.
 compileExpr :: (L.Expr a) -> Compiler (Type, Value)
 compileExpr e = case tryEval e of
   Nothing -> doCompileExpr e
@@ -24,6 +26,7 @@ compileExpr e = case tryEval e of
     E.VBool b -> return (Ti1, VBool b)
     E.VString s -> newConstant s >>= \c -> return (Ptr Ti8, VConst c)
 
+-- Actual expression compilation. Should not be called directly.
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
 doCompileExpr (L.EVar _ x) = do
   vs <- askVariables
@@ -106,3 +109,20 @@ doCompileExpr (L.ERel _ e op f) = do
       L.LE _ -> CondSLE
       L.GTH _ -> CondSGT
       L.GE _ -> CondSGE
+doCompileExpr (L.EAnd _ e f) = do
+  vlabel <- freshLabel
+  wlabel <- freshLabel
+  retlabel <- freshLabel
+  -- First operand in `and`.
+  emitInstruction $ ILabel vlabel
+  (_, v) <- compileExpr e
+  emitInstruction $ IBrCond Ti1 v wlabel retlabel
+  -- Second operand in `and`.
+  emitInstruction $ ILabel wlabel
+  (_, w) <- compileExpr f
+  emitInstruction $ IBr retlabel
+  -- Calculate `and` result.
+  emitInstruction $ ILabel retlabel
+  reg <- freshTemp
+  emitInstruction $ IPhi Ti1 [(VBool False, vlabel), (w, wlabel)] reg
+  return (Ti1, VReg reg)
