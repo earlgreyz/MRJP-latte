@@ -116,7 +116,7 @@ doCompileExpr (L.EAnd _ e f) = do
   -- First operand in `and`.
   emitInstruction $ ILabel vlabel
   (_, v) <- compileExpr e
-  emitInstruction $ IBrCond Ti1 v wlabel retlabel
+  emitInstruction $ IBrCond v wlabel retlabel
   -- Second operand in `and`.
   emitInstruction $ ILabel wlabel
   (_, w) <- compileExpr f
@@ -133,7 +133,7 @@ doCompileExpr (L.EOr _ e f) = do
   -- First operand in `and`.
   emitInstruction $ ILabel vlabel
   (_, v) <- compileExpr e
-  emitInstruction $ IBrCond Ti1 v retlabel wlabel
+  emitInstruction $ IBrCond v retlabel wlabel
   -- Second operand in `and`.
   emitInstruction $ ILabel wlabel
   (_, w) <- compileExpr f
