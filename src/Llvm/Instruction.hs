@@ -15,7 +15,7 @@ data Value = VInt Integer | VReg Register | VBool Bool | VConst Constant derivin
 data Instruction
   = ICall Type String [(Type, Value)] (Maybe Register)
   | IRet Type Value
-  | IArithm Value Value ArithmOp Register
+  | IArithm ArithmOp Value Value Register
   | IBr Label
   | IBrCond Type Value Label Label
   | ILabel Label
