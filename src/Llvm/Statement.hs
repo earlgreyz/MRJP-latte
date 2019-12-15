@@ -39,3 +39,13 @@ compileStmt (L.Empty _) = ask
 compileStmt (L.BStmt _ b) = compileBlock b >> ask
 compileStmt (L.Decl _ t ds) = ask >>= \env ->
   foldlM (\env d -> local (const env) $ compileDecl t d) env ds
+compileStmt (L.Ass _ x e) = do
+  vs <- askVariables
+  let (_, reg) = vs M.! x
+  (t, v) <- compileExpr e
+  emitInstruction $ IStore t v reg
+  ask
+compileStmt (L.Incr a x) = compileStmt $ L.Ass a x (
+  L.EAdd a (L.EVar a x) (L.Plus a) (L.ELitInt a 1))
+compileStmt (L.Decr a x) = compileStmt $ L.Ass a x (
+  L.EAdd a (L.EVar a x) (L.Minus a) (L.ELitInt a 1))
