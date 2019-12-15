@@ -49,3 +49,10 @@ compileStmt (L.Incr a x) = compileStmt $ L.Ass a x (
   L.EAdd a (L.EVar a x) (L.Plus a) (L.ELitInt a 1))
 compileStmt (L.Decr a x) = compileStmt $ L.Ass a x (
   L.EAdd a (L.EVar a x) (L.Minus a) (L.ELitInt a 1))
+compileStmt (L.Ret _ e) = do
+  (t, v) <- compileExpr e
+  emitInstruction $ IRet t v
+  ask
+analyzeStmt (L.VRet _) = do
+  emitInstruction $ IRet Tvoid (VInt 0)
+  ask
