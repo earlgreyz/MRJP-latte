@@ -8,7 +8,7 @@ import Evaluate.Expression
 import qualified Evaluate.Value as E
 
 import Llvm.Compiler
-import Llvm.Instruction
+import Llvm.Llvm
 
 -- Constatnts - library function identifiers.
 stringsConcatIdent :: String

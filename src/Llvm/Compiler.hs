@@ -7,7 +7,7 @@ import Control.Monad.RWS.Lazy
 
 import qualified Latte.AbsLatte as L
 
-import Llvm.Instruction
+import Llvm.Llvm
 
 type Variables = M.Map L.Ident (Type, Register)
 type Functions = M.Map L.Ident (Type, Label)

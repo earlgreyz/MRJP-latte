@@ -1,4 +1,4 @@
-module Llvm.Instruction where
+module Llvm.Llvm where
 
 import Data.List
 
