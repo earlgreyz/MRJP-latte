@@ -53,6 +53,10 @@ compileStmt (L.Ret _ e) = do
   (t, v) <- compileExpr e
   emitInstruction $ IRet t v
   ask
-analyzeStmt (L.VRet _) = do
+compileStmt (L.VRet _) = do
   emitInstruction $ IRet Tvoid (VInt 0)
   ask
+compileStmt (L.CondElse _ e st sf) = error "Unimplemented"
+compileStmt (L.Cond _ e s) = error "Unimplemented"
+compileStmt (L.While _ e s) = error "Unimplemented"
+compileStmt (L.SExp _ e) = compileExpr e >> ask

@@ -12,7 +12,7 @@ instance Show Register where
 -- Jump labels.
 newtype Label = Label Integer deriving (Eq, Ord)
 instance Show Label where
-  show (Label i) = "%L_" ++ (show i)
+  show (Label i) = "L_" ++ (show i)
 
 -- String constants.
 data Constant = Constant Integer String deriving (Eq, Ord)
@@ -77,9 +77,9 @@ instance Show Instruction where
   show (IRet t v) = "ret " ++ show t ++ " " ++ show v
   show (IArithm op v w res) = intercalate " " [
     show res, "=", show op, show Ti32, show v ++ ",", show w]
-  show (IBr l) = "br label " ++ show l
+  show (IBr l) = "br label %" ++ show l
   show (IBrCond v l1 l2) =
-    "br i1 " ++ show v ++ ", label " ++ show l1 ++ ", label " ++ show l2
+    "br i1 " ++ show v ++ ", label %" ++ show l1 ++ ", label %" ++ show l2
   show (ILoad t addr res) =
     show res ++ " = load " ++ show t ++ ", " ++ show (Ptr t) ++ " " ++ show addr
   show (IStore t v res) = intercalate " " [
@@ -91,7 +91,7 @@ instance Show Instruction where
     show res ++ " = phi " ++ (show t) ++ (intercalate "," $ map showArg args)
     where
       showArg :: (Value, Label) -> String
-      showArg (v, l) = "[" ++ show v ++ ", " ++ show l ++ "]"
+      showArg (v, l) = "[" ++ show v ++ ", %" ++ show l ++ "]"
 
 -- Arithmetic operations.
 data ArithmOp = OpAdd | OpSub | OpMul | OpDiv | OpMod deriving Eq
@@ -114,9 +114,19 @@ instance Show Cond where
 
 -- Block of instructions.
 newtype Block = Block (Label, [Instruction]) deriving Eq
+instance Show Block where
+  show (Block (l, is)) = show l ++ (intercalate "\n" $ map show is)
 
 -- Function definition.
-newtype Function = Function (Type, String, [(Type, String)], [Block]) deriving Eq
+newtype Function = Function (Type, String, [(Type, Register)], [Block]) deriving Eq
+instance Show Function where
+  show (Function (r, f, args, bs)) =
+    "define " ++ show r ++ " @" ++ f ++
+    "(" ++ (intercalate ", " $ map showArg args) ++ ") {\n" ++
+    intercalate "\n" (map show bs) ++ "\n}"
+    where
+      showArg :: (Type, Register) -> String
+      showArg (t, r) = (show t) ++ " " ++ (show r)
 
 -- Helper functions.
 newBlock :: Label -> Block
