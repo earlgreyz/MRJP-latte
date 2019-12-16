@@ -19,10 +19,10 @@ compileManyStmt :: [L.Stmt a] -> Compiler ()
 compileManyStmt ss = ask >>= \env ->
   foldlM (\env s -> local (const env) $ compileStmt s) env ss >> return ()
 
-compileDecl :: L.Type a -> L.Item a -> Compiler Environment
+compileDecl :: L.Type a -> L.Item a -> Compiler Env
 compileDecl t (L.Init _ x e) = do
   (tv, v) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IAlloca tv reg
   emitInstruction $ IStore tv v reg
   (vs, fs) <- ask
@@ -34,7 +34,7 @@ compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
     L.Bool a -> L.ELitFalse a
     L.Str a -> L.EString a ""
 
-compileStmt :: L.Stmt a -> Compiler Environment
+compileStmt :: L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask
 compileStmt (L.BStmt _ b) = compileBlock b >> ask
 compileStmt (L.Decl _ t ds) = ask >>= \env ->

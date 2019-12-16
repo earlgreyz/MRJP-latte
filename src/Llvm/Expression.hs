@@ -30,7 +30,7 @@ compileExpr e = case tryEval e of
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
 doCompileExpr (L.EVar _ x) = do
   vs <- askVariables
-  reg <- freshTemp
+  reg <- freshRegister
   let (t, ptr) = vs M.! x
   emitInstruction $ ILoad t ptr reg
   return (t, VReg reg)
@@ -43,23 +43,23 @@ doCompileExpr (L.EApp _ f args) = do
       emitInstruction $ ICall rt (show f) xs Nothing
       return (Tvoid, VInt 0)
     _ -> do
-      reg <- freshTemp
+      reg <- freshRegister
       emitInstruction $ ICall rt (show f) xs (Just reg)
       return (rt, VReg reg)
 doCompileExpr (L.Neg _ e) = do
   (_, v) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IArithm OpSub (VInt 0) v reg
   return (Ti32, VReg reg)
 doCompileExpr (L.Not _ e) = do
   (_, v) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IIcmp CondEQ Ti1 (VBool False) v reg
   return (Ti1, VReg reg)
 doCompileExpr (L.EMul _ e op f) = do
   (_, v) <- compileExpr e
   (_, w) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IArithm (convertMulOp op) v w reg
   return (Ti32, VReg reg)
   where
@@ -71,7 +71,7 @@ doCompileExpr (L.EMul _ e op f) = do
 doCompileExpr (L.EAdd _ e op f) = do
   (tv, v) <- compileExpr e
   (tw, w) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   -- Strings `+` has to be handled seperately.
   if tv == Ptr Ti8 then
     emitInstruction $ ICall (Ptr Ti8) stringsConcatIdent [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
@@ -86,14 +86,14 @@ doCompileExpr (L.EAdd _ e op f) = do
 doCompileExpr (L.ERel _ e op f) = do
   (tv, v) <- compileExpr e
   (tw, w) <- compileExpr e
-  reg <- freshTemp
+  reg <- freshRegister
   -- Strings comparison has to be handled seperately.
   if tv == Ptr Ti8 then do
     emitInstruction $ ICall (Ptr Ti8) stringsEqualIdent [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
     -- If `\=` we need to negate the result.
     case op of
       L.NE _ -> do
-        res <- freshTemp
+        res <- freshRegister
         emitInstruction $ IIcmp CondEQ Ti1 (VBool False) (VReg reg) res
         return (Ti1, VReg res)
       _ -> return (Ti1, VReg reg)
@@ -113,6 +113,7 @@ doCompileExpr (L.EAnd _ e f) = do
   vlabel <- freshLabel
   wlabel <- freshLabel
   retlabel <- freshLabel
+  emitInstruction $ IBr vlabel
   -- First operand in `and`.
   emitInstruction $ ILabel vlabel
   (_, v) <- compileExpr e
@@ -123,7 +124,7 @@ doCompileExpr (L.EAnd _ e f) = do
   emitInstruction $ IBr retlabel
   -- Calculate `and` result.
   emitInstruction $ ILabel retlabel
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool False, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)
 doCompileExpr (L.EOr _ e f) = do
@@ -140,6 +141,6 @@ doCompileExpr (L.EOr _ e f) = do
   emitInstruction $ IBr retlabel
   -- Calculate `and` result.
   emitInstruction $ ILabel retlabel
-  reg <- freshTemp
+  reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool True, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)

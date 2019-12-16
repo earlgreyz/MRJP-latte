@@ -129,11 +129,11 @@ instance Show Function where
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
 -- Helper functions.
-newBlock :: Label -> Block
-newBlock l = Block (l, [])
-
-blockAppend :: Block -> Instruction -> Block
-blockAppend (Block (l, is)) i = Block (l, is ++ [i])
+isBranch :: Instruction -> Bool
+isBranch i = case i of
+  IBr _ -> True
+  IBrCond _ _ _ -> True
+  otherwise -> False
 
 nextRegister :: Register -> Register
 nextRegister (Register r) = Register $ r + 1
