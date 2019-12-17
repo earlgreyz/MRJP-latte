@@ -2,17 +2,21 @@ module Llvm.Llvm where
 
 import Data.List
 
-import qualified Latte.AbsLatte as L
-
 -- Register names.
 newtype Register = Register Integer deriving (Eq, Ord)
 instance Show Register where
   show (Register r) = "%r_" ++ (show r)
 
+nextRegister :: Register -> Register
+nextRegister (Register r) = Register $ r + 1
+
 -- Jump labels.
 newtype Label = Label Integer deriving (Eq, Ord)
 instance Show Label where
   show (Label i) = "L_" ++ (show i)
+
+nextLabel :: Label -> Label
+nextLabel (Label l) = Label $ l + 1
 
 -- String constants.
 data Constant = Constant Integer String deriving (Eq, Ord)
@@ -128,22 +132,19 @@ instance Show Function where
       showArg :: (Type, Register) -> String
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
+-- Top definition declaration.
+data Declaration = DeclFun Type String [Type]
+instance Show Declaration where
+  show (DeclFun r f args) =
+    "declare " ++ show r ++ " @" ++ f ++
+    "(" ++ (intercalate "," $ map show args) ++ ")"
+
+-- Program.
+newtype Program = Program ([Declaration], [Constant], [Function])
+
 -- Helper functions.
 isBranch :: Instruction -> Bool
 isBranch i = case i of
   IBr _ -> True
   IBrCond _ _ _ -> True
   otherwise -> False
-
-nextRegister :: Register -> Register
-nextRegister (Register r) = Register $ r + 1
-
-nextLabel :: Label -> Label
-nextLabel (Label l) = Label $ l + 1
-
-convertType :: L.Type a -> Type
-convertType t = case t of
-  L.Void _ -> Tvoid
-  L.Int _ -> Ti32
-  L.Bool _ -> Ti1
-  L.Str _ -> Ptr Ti8

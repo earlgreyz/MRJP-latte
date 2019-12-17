@@ -106,6 +106,12 @@ freshLabel = do
 askVariables :: Compiler Variables
 askVariables = ask >>= \(vs, _) -> return vs
 
+localVariables :: (Variables -> Variables) -> Compiler a -> Compiler a
+localVariables f compiler = local (\(vs, fs) -> (f vs, fs)) compiler
+
 -- Returns functions map.
 askFunctions :: Compiler Functions
 askFunctions = ask >>= \(_, fs) -> return fs
+
+localFunctions :: (Functions -> Functions) -> Compiler a -> Compiler a
+localFunctions f compiler = local (\(vs, fs) -> (vs, f fs)) compiler

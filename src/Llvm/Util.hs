@@ -1,0 +1,12 @@
+module Llvm.Util where
+
+import qualified Latte.AbsLatte as L
+
+import Llvm.Llvm
+
+convertType :: L.Type a -> Type
+convertType t = case t of
+  L.Void _ -> Tvoid
+  L.Int _ -> Ti32
+  L.Bool _ -> Ti1
+  L.Str _ -> Ptr Ti8

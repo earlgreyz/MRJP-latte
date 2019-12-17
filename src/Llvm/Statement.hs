@@ -1,4 +1,4 @@
-module Llvm.Statement (compileStmt) where
+module Llvm.Statement (compileStmt, compileBlock) where
 
 import Data.Foldable
 import qualified Data.Map as M
