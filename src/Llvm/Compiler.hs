@@ -2,6 +2,7 @@ module Llvm.Compiler where
 
 import qualified Data.Map as M
 
+import Control.Monad.Identity
 import Control.Monad.RWS.Lazy
 import Control.Monad.State
 import Control.Monad.Writer
@@ -26,7 +27,9 @@ type BlockBuilderT a = StateT BlockBuilderState a
 type FunctionBuilderState = (FunctionHeader, [Block])
 type FunctionBuilderT a = StateT FunctionBuilderState (BlockBuilderT a)
 -- All monads combined.
-type Compiler = RWST Env [Function] CompilerState (FunctionBuilderT (ConstantBuilderT IO))
+type CompilerConstantBuilder = ConstantBuilderT Identity
+type CompilerFunctionBuilder = FunctionBuilderT CompilerConstantBuilder
+type Compiler = RWST Env [Function] CompilerState CompilerFunctionBuilder
 
 -- FunctionBuilderT lifted functions.
 getFunctionBuilder :: Compiler FunctionBuilderState

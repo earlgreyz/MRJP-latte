@@ -119,7 +119,7 @@ instance Show Cond where
 -- Block of instructions.
 newtype Block = Block (Label, [Instruction]) deriving Eq
 instance Show Block where
-  show (Block (l, is)) = show l ++ (intercalate "\n" $ map show is)
+  show (Block (l, is)) = show l ++ (unlines $ map show is)
 
 -- Function definition.
 newtype Function = Function (Type, String, [(Type, Register)], [Block]) deriving Eq
@@ -141,6 +141,11 @@ instance Show Declaration where
 
 -- Program.
 newtype Program = Program ([Declaration], [Constant], [Function])
+instance Show Program where
+  show (Program (ds, cs, fs)) =
+    (unlines $ map show ds) ++ "\n" ++
+    (unlines $ map show cs) ++ "\n" ++
+    (unlines $ map show fs)
 
 -- Helper functions.
 isBranch :: Instruction -> Bool
