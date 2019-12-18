@@ -103,5 +103,34 @@ compileStmt (L.Cond _ e s) = case tryEval e of
     -- After conditional block.
     startBlock retlabel
     ask
-compileStmt (L.While _ e s) = error "Unimplemented"
+compileStmt (L.While _ e s) = case tryEval e of
+  Just (E.VBool True) -> do
+    label <- freshLabel
+    emitInstruction $ IBr label
+    endBlock
+    startBlock label
+    compileStmt s
+    emitInstruction $ IBr label
+    contlabel <- freshLabel
+    startBlock contlabel
+    ask
+  Just (E.VBool False) -> ask
+  Nothing -> do
+    condlabel <- freshLabel
+    bodylabel <- freshLabel
+    contlabel <- freshLabel
+    endBlock
+    -- Conditional.
+    startBlock condlabel
+    (_, b) <- compileExpr e
+    emitInstruction $ IBrCond b bodylabel contlabel
+    endBlock
+    -- Body.
+    startBlock bodylabel
+    compileStmt s
+    emitInstruction $ IBr condlabel
+    endBlock
+    -- Continue.
+    startBlock contlabel
+    ask
 compileStmt (L.SExp _ e) = compileExpr e >> ask
