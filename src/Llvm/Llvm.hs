@@ -121,7 +121,10 @@ instance Show Cond where
 -- Block of instructions.
 newtype Block = Block (Label, [Instruction]) deriving Eq
 instance Show Block where
-  show (Block (l, is)) = show l ++ (unlines $ map show is)
+  show (Block (l, is)) = show l ++ ":\n" ++ (unlines $ map (indent . show) is)
+    where
+      indent :: String -> String
+      indent s = "  " ++ s
 
 -- Function definition.
 newtype Function = Function (Type, String, [(Type, Register)], [Block]) deriving Eq

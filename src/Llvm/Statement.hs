@@ -13,7 +13,11 @@ import Llvm.Expression
 import Llvm.Llvm
 
 compileBlock :: L.Block a -> Compiler ()
-compileBlock (L.Block _ ss) = compileManyStmt ss
+compileBlock (L.Block _ ss) = do
+  label <- freshLabel
+  startBlock label
+  compileManyStmt ss
+  endBlock
 
 compileManyStmt :: [L.Stmt a] -> Compiler ()
 compileManyStmt ss = ask >>= \env ->
