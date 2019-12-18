@@ -8,6 +8,9 @@ import Control.Monad.State
 
 import qualified Latte.AbsLatte as L
 
+import Evaluate.Expression (tryEval)
+import qualified Evaluate.Value as E
+
 import Llvm.Compiler
 import Llvm.Expression
 import Llvm.Llvm
@@ -60,7 +63,45 @@ compileStmt (L.Ret _ e) = do
 compileStmt (L.VRet _) = do
   emitInstruction $ IRet Tvoid (VInt 0)
   ask
-compileStmt (L.CondElse _ e st sf) = error "Unimplemented"
-compileStmt (L.Cond _ e s) = error "Unimplemented"
+compileStmt (L.CondElse _ e st sf) = case tryEval e of
+  Just (E.VBool True) -> compileStmt st
+  Just (E.VBool False) -> compileStmt sf
+  Nothing -> do
+    (_, b) <- compileExpr e
+    tlabel <- freshLabel
+    flabel <- freshLabel
+    retlabel <- freshLabel
+    emitInstruction $ IBrCond b tlabel flabel
+    endBlock
+    -- True block.
+    startBlock tlabel
+    compileStmt st
+    emitInstruction $ IBr retlabel
+    endBlock
+    -- False block.
+    startBlock flabel
+    compileStmt sf
+    emitInstruction $ IBr retlabel
+    endBlock
+    -- After conditional block.
+    startBlock retlabel
+    ask
+compileStmt (L.Cond _ e s) = case tryEval e of
+  Just (E.VBool True) -> compileStmt s
+  Just (E.VBool False) -> ask
+  Nothing -> do
+    (_, b) <- compileExpr e
+    tlabel <- freshLabel
+    retlabel <- freshLabel
+    emitInstruction $ IBrCond b tlabel retlabel
+    endBlock
+    -- True block.
+    startBlock tlabel
+    compileStmt s
+    emitInstruction $ IBr retlabel
+    endBlock
+    -- After conditional block.
+    startBlock retlabel
+    ask
 compileStmt (L.While _ e s) = error "Unimplemented"
 compileStmt (L.SExp _ e) = compileExpr e >> ask

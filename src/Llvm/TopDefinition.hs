@@ -17,8 +17,8 @@ collectDeclaration (L.FnDef _ t fname args _) = do
   return $ DeclFun rt fname (convertFunctionName fname) ts
 
 compileTopDef :: L.TopDef a -> Compiler ()
-compileTopDef fun@(L.FnDef _ t fname args block) = do
-  (DeclFun rt _ fname ts) <- collectDeclaration fun
+compileTopDef f@(L.FnDef _ t _ args block) = do
+  (DeclFun rt _ fname ts) <- collectDeclaration f
   -- Collect argument names.
   let xs = map (\(L.Arg _ _ x) -> x) args
   -- Generate registers for paramaters.

@@ -114,16 +114,19 @@ doCompileExpr (L.EAnd _ e f) = do
   wlabel <- freshLabel
   retlabel <- freshLabel
   emitInstruction $ IBr vlabel
+  endBlock
   -- First operand in `and`.
-  emitInstruction $ ILabel vlabel
+  startBlock vlabel
   (_, v) <- compileExpr e
   emitInstruction $ IBrCond v wlabel retlabel
+  endBlock
   -- Second operand in `and`.
-  emitInstruction $ ILabel wlabel
+  startBlock wlabel
   (_, w) <- compileExpr f
   emitInstruction $ IBr retlabel
+  endBlock
   -- Calculate `and` result.
-  emitInstruction $ ILabel retlabel
+  startBlock retlabel
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool False, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)
@@ -131,16 +134,19 @@ doCompileExpr (L.EOr _ e f) = do
   vlabel <- freshLabel
   wlabel <- freshLabel
   retlabel <- freshLabel
+  emitInstruction $ IBr vlabel
   -- First operand in `and`.
-  emitInstruction $ ILabel vlabel
+  startBlock vlabel
   (_, v) <- compileExpr e
   emitInstruction $ IBrCond v retlabel wlabel
+  endBlock
   -- Second operand in `and`.
-  emitInstruction $ ILabel wlabel
+  startBlock wlabel
   (_, w) <- compileExpr f
   emitInstruction $ IBr retlabel
+  endBlock
   -- Calculate `and` result.
-  emitInstruction $ ILabel retlabel
+  startBlock retlabel
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool True, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)
