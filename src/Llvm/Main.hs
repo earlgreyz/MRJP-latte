@@ -10,16 +10,9 @@ import Control.Monad.Writer
 import qualified Latte.AbsLatte as L
 
 import Llvm.Compiler
+import Llvm.Internal
 import Llvm.Llvm
 import Llvm.TopDefinition
-
-internalFunctions :: [Declaration]
-internalFunctions = [
-  DeclFun Tvoid (L.Ident "printInt") "printInt" [Ti32],
-  DeclFun Tvoid (L.Ident "printString") "printString" [Ptr Ti8],
-  DeclFun Tvoid (L.Ident "error") "error" [],
-  DeclFun Ti32 (L.Ident "readInt") "readInt" [],
-  DeclFun (Ptr Ti8) (L.Ident "readString") "readString" []]
 
 fromDeclarations :: [Declaration] -> Functions
 fromDeclarations ds = M.fromList $ map convert ds
@@ -29,11 +22,11 @@ fromDeclarations ds = M.fromList $ map convert ds
 
 runCompileProgram :: L.Program a -> Program
 runCompileProgram p =
-  let ((ds, _, fs), cs) = runConstantBuilder $ evalBlockBuilder $ evalFunctionBuilder $ runCompilerRWST $ compileProgram p in
-    Program (internalFunctions ++ ds, cs, fs)
+  let ((_, fs), cs) = runConstantBuilder $ evalBlockBuilder $ evalFunctionBuilder $ execCompilerRWST $ compileProgram p in
+    Program (internalFunctions, cs, fs)
   where
-    runCompilerRWST m =
-      runRWST m (M.empty, fromDeclarations $ internalFunctions) (Register 0, Label 0)
+    execCompilerRWST m =
+      execRWST m (M.empty, fromDeclarations $ internalFunctions) (Register 0, Label 0)
     evalFunctionBuilder m =
       evalStateT m ((Tvoid, "", []), [])
     evalBlockBuilder m =
@@ -41,8 +34,7 @@ runCompileProgram p =
     runConstantBuilder m =
       runIdentity $ runWriterT $ evalStateT m 0
 
-compileProgram :: L.Program a -> Compiler [Declaration]
+compileProgram :: L.Program a -> Compiler ()
 compileProgram (L.Program _ ts) = do
   ds <- mapM collectDeclaration ts
   localFunctions (\fs -> M.union fs $ fromDeclarations ds) $ mapM_ compileTopDef ts
-  return ds
