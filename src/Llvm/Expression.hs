@@ -37,14 +37,14 @@ doCompileExpr (L.EVar _ x) = do
 doCompileExpr (L.EApp _ f args) = do
   fs <- askFunctions
   xs <- mapM compileExpr args
-  let (rt, _) = fs M.! f
+  let (rt, fname) = fs M.! f
   case rt of
     Tvoid -> do
-      emitInstruction $ ICall rt (show f) xs Nothing
+      emitInstruction $ ICall rt fname xs Nothing
       return (Tvoid, VInt 0)
     _ -> do
       reg <- freshRegister
-      emitInstruction $ ICall rt (show f) xs (Just reg)
+      emitInstruction $ ICall rt fname xs (Just reg)
       return (rt, VReg reg)
 doCompileExpr (L.Neg _ e) = do
   (_, v) <- compileExpr e

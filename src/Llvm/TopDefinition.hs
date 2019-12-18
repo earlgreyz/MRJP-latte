@@ -1,5 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
-module Llvm.TopDefinition (compileTopDef) where
+module Llvm.TopDefinition (collectDeclaration, compileTopDef) where
 
 import qualified Data.Map as M
 
@@ -10,17 +10,21 @@ import Llvm.Llvm
 import Llvm.Statement
 import Llvm.Util
 
-compileTopDef :: (L.TopDef a) -> Compiler Declaration
-compileTopDef (L.FnDef _ t f args block) = do
+collectDeclaration :: L.TopDef a -> Compiler Declaration
+collectDeclaration (L.FnDef _ t fname args _) = do
   let rt = convertType t
-  -- Collect argument types.
   let ts = map (\(L.Arg _ t _) -> convertType t) args
+  return $ DeclFun rt fname (convertFunctionName fname) ts
+
+compileTopDef :: L.TopDef a -> Compiler ()
+compileTopDef fun@(L.FnDef _ t fname args block) = do
+  (DeclFun rt _ fname ts) <- collectDeclaration fun
   -- Collect argument names.
   let xs = map (\(L.Arg _ _ x) -> x) args
   -- Generate registers for paramaters.
   params <- mapM (\_ -> freshRegister) args
   -- Start function blocks.
-  startFunction rt (show f) $ zip ts params
+  startFunction rt fname $ zip ts params
   -- Initialize argument variabbles.
   argregs <- mapM initArgument $ zip ts params
   -- Create parameters variables map.
@@ -28,7 +32,6 @@ compileTopDef (L.FnDef _ t f args block) = do
   -- Execute block with local variables
   localVariables (\vs -> M.union vs $ vars) $ compileBlock block
   endFunction
-  return $ DeclFun rt (show f) ts
   where
     initArgument :: (Type, Register) -> Compiler Register
     initArgument (t, v) = do

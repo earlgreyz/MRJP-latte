@@ -10,9 +10,10 @@ import Control.Monad.Writer
 import qualified Latte.AbsLatte as L
 
 import Llvm.Llvm
+import Llvm.Util
 
 type Variables = M.Map L.Ident (Type, Register)
-type Functions = M.Map L.Ident (Type, Label)
+type Functions = M.Map L.Ident (Type, String)
 
 type Env = (Variables, Functions)
 type CompilerState = (Register, Label)

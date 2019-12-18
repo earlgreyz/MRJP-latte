@@ -1,5 +1,7 @@
 module Llvm.Llvm where
 
+import qualified Latte.AbsLatte as L
+
 import Data.List
 
 -- Register names.
@@ -133,9 +135,9 @@ instance Show Function where
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
 -- Top definition declaration.
-data Declaration = DeclFun Type String [Type]
+data Declaration = DeclFun Type L.Ident String [Type]
 instance Show Declaration where
-  show (DeclFun r f args) =
+  show (DeclFun r _ f args) =
     "declare " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate "," $ map show args) ++ ")"
 
@@ -143,8 +145,8 @@ instance Show Declaration where
 newtype Program = Program ([Declaration], [Constant], [Function])
 instance Show Program where
   show (Program (ds, cs, fs)) =
-    (unlines $ map show ds) ++ "\n" ++
-    (unlines $ map show cs) ++ "\n" ++
+    (unlines $ map show ds) ++
+    (unlines $ map show cs) ++
     (unlines $ map show fs)
 
 -- Helper functions.

@@ -15,6 +15,7 @@ import Latte.ErrM
 import Latte.ErrLatte
 
 import Analyzer.Main
+import Llvm.Main
 
 myLLexer = myLexer
 
@@ -38,6 +39,8 @@ run p f s = let ts = myLLexer s in case p ts of
         exitFailure
       Right _ -> do
         hPutStr stderr "OK\n"
+        let p = runCompileProgram program
+        putStr $ show p
 
 main :: IO ()
 main = do

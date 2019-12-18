@@ -10,3 +10,7 @@ convertType t = case t of
   L.Int _ -> Ti32
   L.Bool _ -> Ti1
   L.Str _ -> Ptr Ti8
+
+convertFunctionName :: L.Ident -> String
+convertFunctionName (L.Ident s) =
+  if s == "main" then s else "_" ++ s
