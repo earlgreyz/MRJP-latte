@@ -11,6 +11,7 @@ import qualified Latte.AbsLatte as L
 
 import Llvm.Compiler
 import Llvm.Llvm
+import Llvm.TopDefinition
 
 runCompileProgram :: L.Program a -> Program
 runCompileProgram p =
@@ -27,4 +28,4 @@ runCompileProgram p =
       runIdentity $ runWriterT $ evalStateT m 0
 
 compileProgram :: L.Program a -> Compiler [Declaration]
-compileProgram (L.Program _ ts) = return []
+compileProgram (L.Program _ ts) = mapM compileTopDef ts

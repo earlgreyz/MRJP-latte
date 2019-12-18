@@ -1,5 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
-module Llvm.TopDefinition where
+module Llvm.TopDefinition (compileTopDef) where
 
 import qualified Data.Map as M
 
@@ -10,7 +10,7 @@ import Llvm.Llvm
 import Llvm.Statement
 import Llvm.Util
 
-compileTopDef :: (L.TopDef a) -> Compiler ()
+compileTopDef :: (L.TopDef a) -> Compiler Declaration
 compileTopDef (L.FnDef _ t f args block) = do
   let rt = convertType t
   -- Collect argument types.
@@ -28,6 +28,7 @@ compileTopDef (L.FnDef _ t f args block) = do
   -- Execute block with local variables
   localVariables (\vs -> M.union vs $ vars) $ compileBlock block
   endFunction
+  return $ DeclFun rt (show f) ts
   where
     initArgument :: (Type, Register) -> Compiler Register
     initArgument (t, v) = do
