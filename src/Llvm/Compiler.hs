@@ -72,6 +72,11 @@ emitBlock :: Block -> Compiler ()
 emitBlock b = modifyFunctionBuilder $ \(h, bs) -> (h, bs ++ [b])
 
 -- BlockBuilderT helper functions.
+getBlockLabel :: Compiler Label
+getBlockLabel = do
+  (label, _, _) <- getBlockBuilder
+  return label
+
 getBlockFinalized :: Compiler Bool
 getBlockFinalized = do
   (_, finalized, _) <- getBlockBuilder

@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 module Llvm.TopDefinition (collectDeclaration, compileTopDef) where
 
+import Control.Monad
 import qualified Data.Map as M
 
 import qualified Latte.AbsLatte as L
@@ -31,6 +32,8 @@ compileTopDef f@(L.FnDef _ t _ args block) = do
   let vars = M.fromList $ zip xs $ zip ts argregs
   -- Execute block with local variables
   localVariables (\vs -> M.union vs $ vars) $ compileBlock block
+  -- For void functions add implicit return.
+  when (rt == Tvoid) $ emitInstruction $ IRet Tvoid (VInt 0)
   endFunction
   where
     initArgument :: (Type, Register) -> Compiler Register
