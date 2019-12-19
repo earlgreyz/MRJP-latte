@@ -32,8 +32,8 @@ compileTopDef f@(L.FnDef _ t _ args block) = do
   let vars = M.fromList $ zip xs $ zip ts argregs
   -- Execute block with local variables
   localVariables (\vs -> M.union vs $ vars) $ compileBlock block
-  -- For void functions add implicit return.
-  when (rt == Tvoid) $ emitInstruction $ IRet Tvoid (VInt 0)
+  -- Implicitly return default value so all blocks get generated.
+  returnDefault rt
   endFunction
   where
     initArgument :: (Type, Register) -> Compiler Register
@@ -42,3 +42,10 @@ compileTopDef f@(L.FnDef _ t _ args block) = do
       emitInstruction $ IAlloca t reg
       emitInstruction $ IStore t (VReg v) reg
       return reg
+    returnDefault :: Type -> Compiler ()
+    returnDefault t = case t of
+      Tvoid -> emitInstruction $ IRet Tvoid (VInt 0)
+      Ti1 -> emitInstruction $ IRet Ti1 (VBool False)
+      Ti32 -> emitInstruction $ IRet Ti32 (VInt 0)
+      Ptr Ti8 -> newConstant "" >>= \c -> emitInstruction $ IRet (Ptr Ti8) (VConst c)
+      _ -> error "unknown type"
