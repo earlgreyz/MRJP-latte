@@ -9,13 +9,7 @@ import qualified Evaluate.Value as E
 
 import Llvm.Compiler
 import Llvm.Llvm
-
--- Constatnts - library function identifiers.
-stringsConcatIdent :: String
-stringsConcatIdent = "stringsConcat"
-
-stringsEqualIdent :: String
-stringsEqualIdent = "stringsEqual"
+import Llvm.Internal
 
 -- Compiles expression simplifying constants.
 compileExpr :: (L.Expr a) -> Compiler (Type, Value)
@@ -73,11 +67,12 @@ doCompileExpr (L.EAdd _ e op f) = do
   (tw, w) <- compileExpr f
   reg <- freshRegister
   -- Strings `+` has to be handled seperately.
-  if tv == Ptr Ti8 then
-    emitInstruction $ ICall (Ptr Ti8) stringsConcatIdent [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
-  else
+  if tv == Ptr Ti8 then do
+    emitInstruction $ ICall (Ptr Ti8) stringsConcat [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
+    return (Ptr Ti8, VReg reg)
+  else do
     emitInstruction $ IArithm (convertAddOp op) v w reg
-  return (Ti32, VReg reg)
+    return (Ti32, VReg reg)
   where
     convertAddOp :: L.AddOp a -> ArithmOp
     convertAddOp op = case op of
@@ -89,7 +84,7 @@ doCompileExpr (L.ERel _ e op f) = do
   reg <- freshRegister
   -- Strings comparison has to be handled seperately.
   if tv == Ptr Ti8 then do
-    emitInstruction $ ICall (Ptr Ti8) stringsEqualIdent [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
+    emitInstruction $ ICall (Ptr Ti8) stringsEqual [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
     -- If `\=` we need to negate the result.
     case op of
       L.NE _ -> do
