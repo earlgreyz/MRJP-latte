@@ -7,6 +7,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 
 import qualified Latte.AbsLatte as L
+import Latte.PrintLatte
 
 import Evaluate.Expression (tryEval)
 import qualified Evaluate.Value as E
@@ -18,9 +19,9 @@ import Llvm.Llvm
 compileBlock :: L.Block a -> Compiler ()
 compileBlock (L.Block _ ss) = do
   label <- freshLabel
-  startBlock label
+  emitInstruction $ IBr label
+  emitInstruction $ ILabel label
   compileManyStmt ss
-  endBlock
 
 compileManyStmt :: [L.Stmt a] -> Compiler ()
 compileManyStmt ss = ask >>= \env ->
@@ -71,20 +72,18 @@ compileStmt (L.CondElse _ e st sf) = case tryEval e of
     tlabel <- freshLabel
     flabel <- freshLabel
     retlabel <- freshLabel
+    emitInstruction $ IComment $ printTree e
     emitInstruction $ IBrCond b tlabel flabel
-    endBlock
     -- True block.
-    startBlock tlabel
+    emitInstruction $ ILabel tlabel
     compileStmt st
     emitInstruction $ IBr retlabel
-    endBlock
     -- False block.
-    startBlock flabel
+    emitInstruction $ ILabel flabel
     compileStmt sf
     emitInstruction $ IBr retlabel
-    endBlock
     -- After conditional block.
-    startBlock retlabel
+    emitInstruction $ ILabel retlabel
     ask
 compileStmt (L.Cond _ e s) = case tryEval e of
   Just (E.VBool True) -> compileStmt s
@@ -93,44 +92,43 @@ compileStmt (L.Cond _ e s) = case tryEval e of
     (_, b) <- compileExpr e
     tlabel <- freshLabel
     retlabel <- freshLabel
+    emitInstruction $ IComment $ printTree e
     emitInstruction $ IBrCond b tlabel retlabel
-    endBlock
     -- True block.
-    startBlock tlabel
+    emitInstruction $ ILabel tlabel
     compileStmt s
     emitInstruction $ IBr retlabel
-    endBlock
     -- After conditional block.
-    startBlock retlabel
+    emitInstruction $ ILabel retlabel
     ask
 compileStmt (L.While _ e s) = case tryEval e of
   Just (E.VBool True) -> do
     label <- freshLabel
     emitInstruction $ IBr label
-    endBlock
-    startBlock label
+    -- Body.
+    emitInstruction $ ILabel label
     compileStmt s
     emitInstruction $ IBr label
+    -- Continue.
     contlabel <- freshLabel
-    startBlock contlabel
+    emitInstruction $ ILabel contlabel
     ask
   Just (E.VBool False) -> ask
   Nothing -> do
     condlabel <- freshLabel
     bodylabel <- freshLabel
     contlabel <- freshLabel
-    endBlock
+    emitInstruction $ IBr condlabel
     -- Conditional.
-    startBlock condlabel
+    emitInstruction $ ILabel condlabel
     (_, b) <- compileExpr e
+    emitInstruction $ IComment $ printTree e
     emitInstruction $ IBrCond b bodylabel contlabel
-    endBlock
     -- Body.
-    startBlock bodylabel
+    emitInstruction $ ILabel bodylabel
     compileStmt s
     emitInstruction $ IBr condlabel
-    endBlock
     -- Continue.
-    startBlock contlabel
+    emitInstruction $ ILabel contlabel
     ask
 compileStmt (L.SExp _ e) = compileExpr e >> ask

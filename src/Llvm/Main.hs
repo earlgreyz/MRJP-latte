@@ -30,7 +30,7 @@ runCompileProgram p =
     evalFunctionBuilder m =
       evalStateT m ((Tvoid, "", []), [])
     evalBlockBuilder m =
-      evalStateT m (Label 0, [])
+      evalStateT m (Label 0, True, [])
     runConstantBuilder m =
       runIdentity $ runWriterT $ evalStateT m 0
 

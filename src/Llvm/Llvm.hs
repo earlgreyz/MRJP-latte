@@ -24,7 +24,7 @@ nextLabel (Label l) = Label $ l + 1
 data Constant = Constant Integer String deriving (Eq, Ord)
 instance Show Constant where
   show (Constant i s) = intercalate "" [
-    "@const_", show i, " = private unnamed_addr constant ",
+    "@const_", show i, " = private unnamed_addr constant [",
     show (1 + length s), " x i8] c\"", escape s, "\\00\", align 1" ]
     where
       escape :: String -> String
@@ -68,6 +68,7 @@ data Instruction
   | IAlloca Type Register
   | IIcmp Cond Type Value Value Register
   | IPhi Type [(Value, Label)] Register
+  | IComment String
   deriving Eq
 instance Show Instruction where
   show (ICall rt f args res) = intercalate "" [
@@ -98,13 +99,14 @@ instance Show Instruction where
     where
       showArg :: (Value, Label) -> String
       showArg (v, l) = "[" ++ show v ++ ", %" ++ show l ++ "]"
+  show (IComment s) = "; " ++ s
 
 -- Arithmetic operations.
 data ArithmOp = OpAdd | OpSub | OpMul | OpDiv | OpMod deriving Eq
 instance Show ArithmOp where
   show OpAdd = "add"
   show OpSub = "sub"
-  show OpMul = "smul"
+  show OpMul = "mul"
   show OpDiv = "sdiv"
   show OpMod = "srem"
 
@@ -151,10 +153,3 @@ instance Show Program where
     (unlines $ map show ds) ++
     (unlines $ map show cs) ++
     (unlines $ map show fs)
-
--- Helper functions.
-isBranch :: Instruction -> Bool
-isBranch i = case i of
-  IBr _ -> True
-  IBrCond _ _ _ -> True
-  otherwise -> False

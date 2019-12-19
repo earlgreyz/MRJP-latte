@@ -58,7 +58,7 @@ doCompileExpr (L.Not _ e) = do
   return (Ti1, VReg reg)
 doCompileExpr (L.EMul _ e op f) = do
   (_, v) <- compileExpr e
-  (_, w) <- compileExpr e
+  (_, w) <- compileExpr f
   reg <- freshRegister
   emitInstruction $ IArithm (convertMulOp op) v w reg
   return (Ti32, VReg reg)
@@ -70,7 +70,7 @@ doCompileExpr (L.EMul _ e op f) = do
       L.Mod _ -> OpMod
 doCompileExpr (L.EAdd _ e op f) = do
   (tv, v) <- compileExpr e
-  (tw, w) <- compileExpr e
+  (tw, w) <- compileExpr f
   reg <- freshRegister
   -- Strings `+` has to be handled seperately.
   if tv == Ptr Ti8 then
@@ -85,7 +85,7 @@ doCompileExpr (L.EAdd _ e op f) = do
       L.Minus _ -> OpSub
 doCompileExpr (L.ERel _ e op f) = do
   (tv, v) <- compileExpr e
-  (tw, w) <- compileExpr e
+  (tw, w) <- compileExpr f
   reg <- freshRegister
   -- Strings comparison has to be handled seperately.
   if tv == Ptr Ti8 then do
@@ -114,19 +114,16 @@ doCompileExpr (L.EAnd _ e f) = do
   wlabel <- freshLabel
   retlabel <- freshLabel
   emitInstruction $ IBr vlabel
-  endBlock
   -- First operand in `and`.
-  startBlock vlabel
+  emitInstruction $ ILabel vlabel
   (_, v) <- compileExpr e
   emitInstruction $ IBrCond v wlabel retlabel
-  endBlock
   -- Second operand in `and`.
-  startBlock wlabel
+  emitInstruction $ ILabel wlabel
   (_, w) <- compileExpr f
   emitInstruction $ IBr retlabel
-  endBlock
   -- Calculate `and` result.
-  startBlock retlabel
+  emitInstruction $ ILabel retlabel
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool False, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)
@@ -136,17 +133,15 @@ doCompileExpr (L.EOr _ e f) = do
   retlabel <- freshLabel
   emitInstruction $ IBr vlabel
   -- First operand in `and`.
-  startBlock vlabel
+  emitInstruction $ ILabel vlabel
   (_, v) <- compileExpr e
   emitInstruction $ IBrCond v retlabel wlabel
-  endBlock
   -- Second operand in `and`.
-  startBlock wlabel
+  emitInstruction $ ILabel wlabel
   (_, w) <- compileExpr f
   emitInstruction $ IBr retlabel
-  endBlock
   -- Calculate `and` result.
-  startBlock retlabel
+  emitInstruction $ ILabel retlabel
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool True, vlabel), (w, wlabel)] reg
   return (Ti1, VReg reg)

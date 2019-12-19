@@ -22,7 +22,7 @@ type FunctionHeader = (Type, String, [(Type, Register)])
 -- Monad used to produce constants.
 type ConstantBuilderT a = StateT Integer (WriterT [Constant] a)
 -- Monad used to build blocks from instructions.
-type BlockBuilderState = (Label, [Instruction])
+type BlockBuilderState = (Label, Bool, [Instruction])
 type BlockBuilderT a = StateT BlockBuilderState a
 -- Monad used to build functions from blocks.
 type FunctionBuilderState = (FunctionHeader, [Block])
@@ -58,7 +58,10 @@ tellConstantBuilder c = lift $ lift $ lift $ tell c
 
 -- FunctionBuilderT helper functions.
 startFunction :: Type -> String -> [(Type, Register)] -> Compiler ()
-startFunction t f args = modifyFunctionBuilder $ \_ -> ((t, f, args), [])
+startFunction t f args = do
+  modifyFunctionBuilder $ \_ -> ((t, f, args), [])
+  label <- freshLabel
+  emitInstruction $ ILabel label
 
 endFunction :: Compiler ()
 endFunction = do
@@ -69,19 +72,21 @@ emitBlock :: Block -> Compiler ()
 emitBlock b = modifyFunctionBuilder $ \(h, bs) -> (h, bs ++ [b])
 
 -- BlockBuilderT helper functions.
-startBlock :: Label -> Compiler ()
-startBlock l = modifyBlockBuilder $ \_ -> (l, [])
-
-endBlock :: Compiler ()
-endBlock = do
-  (l, is) <- getBlockBuilder
-  emitBlock $ Block (l, is)
+getBlockFinalized :: Compiler Bool
+getBlockFinalized = do
+  (_, finalized, _) <- getBlockBuilder
+  return finalized
 
 emitInstruction :: Instruction -> Compiler ()
-emitInstruction (ILabel l) = startBlock l
-emitInstruction i = do
-  modifyBlockBuilder $ \(l, is) -> (l, is ++ [i])
-  when (isBranch i) $ endBlock
+emitInstruction (ILabel l) = do
+  modifyBlockBuilder $ \_ -> (l, False, [])
+emitInstruction i = getBlockFinalized >>= \f -> unless f $ doEmitInstruction i
+  where
+    doEmitInstruction :: Instruction -> Compiler ()
+    doEmitInstruction i = do
+      let final = isFinalInstruction i
+      modifyBlockBuilder $ \(l, _, is) -> (l, final, is ++ [i])
+      when (final) $ getBlockBuilder >>= \(l, _, is) -> emitBlock $ Block (l, is)
 
 -- ConstantBuilderT helper functions.
 newConstant :: String -> Compiler Constant
