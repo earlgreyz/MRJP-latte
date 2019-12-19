@@ -15,7 +15,6 @@ convertFunctionName :: L.Ident -> String
 convertFunctionName (L.Ident s) =
   if s == "main" then s else "_" ++ s
 
--- Helper functions.
 isFinalInstruction :: Instruction -> Bool
 isFinalInstruction i = case i of
   IBr _ -> True

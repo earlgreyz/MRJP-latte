@@ -56,6 +56,10 @@ overflowError :: ErrPos -> Integer -> String
 overflowError a n = intercalate " " [
   (showErrPos a), "invalid integer constant value", (show n), "(overflow)"]
 
+missingQuotesError :: ErrPos -> String
+missingQuotesError a = intercalate " " [
+  (showErrPos a), "string constant missing quotes"]
+
 voidArgumentError :: ErrPos -> Ident -> String
 voidArgumentError a x = intercalate " " [
   (showErrPos a), "argument", (showIdent x), "has invalid type void"]

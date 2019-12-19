@@ -40,7 +40,11 @@ analyzeExpr (EApp a f args) = do
       unless (ts == tts) $ throwError $ argumentsError a f ts tts
       return r
     tt -> throwError $ functionError a f tt
-analyzeExpr (EString a _) = return $ Str a
+analyzeExpr (EString a s) = do
+  if (length s < 2) || (head s /= '\"') || (last s /= '\"') then
+    throwError $ missingQuotesError a
+  else
+    return $ Str a
 analyzeExpr (Neg a e) = analyzeUnaryExpr e (Int a)
 analyzeExpr (Not a e) = analyzeUnaryExpr e (Bool a)
 analyzeExpr (EMul a e _ f) = analyzeBinaryExpr e f (Int a)

@@ -40,7 +40,7 @@ compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
   defaultValue t = case t of
     L.Int a -> L.ELitInt a 0
     L.Bool a -> L.ELitFalse a
-    L.Str a -> L.EString a ""
+    L.Str a -> L.EString a "\"\""
 
 compileStmt :: L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask
