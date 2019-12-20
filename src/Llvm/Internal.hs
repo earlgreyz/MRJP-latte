@@ -4,15 +4,15 @@ import qualified Latte.AbsLatte as L
 
 import Llvm.Llvm
 
-stringsConcatIdent :: L.Ident
-stringsConcatIdent = L.Ident "stringsConcat"
 stringsConcat :: String
-stringsConcat = "concat"
+stringsConcat = "stringsConcat"
+stringsConcatIdent :: L.Ident
+stringsConcatIdent = L.Ident stringsConcat
 
-stringsEqualIdent :: L.Ident
-stringsEqualIdent = L.Ident "stringsEqual"
 stringsEqual :: String
-stringsEqual = "streq"
+stringsEqual = "stringsEqual"
+stringsEqualIdent :: L.Ident
+stringsEqualIdent = L.Ident stringsEqual
 
 internalFunctions :: [Declaration]
 internalFunctions = [

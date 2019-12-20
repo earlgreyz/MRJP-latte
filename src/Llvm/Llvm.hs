@@ -134,7 +134,7 @@ instance Show Function where
   show (Function (r, f, args, bs)) =
     "define " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate ", " $ map showArg args) ++ ") {\n" ++
-    intercalate "\n" (map show bs) ++ "\n}"
+    intercalate "\n" (map show bs) ++ "}"
     where
       showArg :: (Type, Register) -> String
       showArg (t, r) = (show t) ++ " " ++ (show r)
@@ -150,6 +150,6 @@ instance Show Declaration where
 newtype Program = Program ([Declaration], [Constant], [Function])
 instance Show Program where
   show (Program (ds, cs, fs)) =
-    (unlines $ map show ds) ++
-    (unlines $ map show cs) ++
+    (unlines $ map show ds) ++ "\n" ++
+    (unlines $ map show cs) ++ "\n" ++
     (unlines $ map show fs)
