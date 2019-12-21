@@ -121,9 +121,9 @@ instance Show Cond where
   show CondSGT = "sgt"
 
 -- Block of instructions.
-newtype Block = Block (Label, [Instruction]) deriving Eq
+newtype Block = Block (Label, [Instruction], Instruction) deriving Eq
 instance Show Block where
-  show (Block (l, is)) = show l ++ ":\n" ++ (unlines $ map (indent . show) is)
+  show (Block (l, is, i)) = show l ++ ":\n" ++ (unlines $ map (indent . show) $ is ++ [i])
     where
       indent :: String -> String
       indent s = "  " ++ s

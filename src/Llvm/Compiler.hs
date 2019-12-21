@@ -82,6 +82,11 @@ getBlockFinalized = do
   (_, finalized, _) <- getBlockBuilder
   return finalized
 
+setBlockFinalized :: Bool -> Compiler ()
+setBlockFinalized f = do
+  (l, _, is) <- getBlockBuilder
+  modifyBlockBuilder $ \_ -> (l, f, is)
+
 emitInstruction :: Instruction -> Compiler ()
 emitInstruction (ILabel l) = do
   modifyBlockBuilder $ \_ -> (l, False, [])
@@ -89,9 +94,12 @@ emitInstruction i = getBlockFinalized >>= \f -> unless f $ doEmitInstruction i
   where
     doEmitInstruction :: Instruction -> Compiler ()
     doEmitInstruction i = do
-      let final = isFinalInstruction i
-      modifyBlockBuilder $ \(l, _, is) -> (l, final, is ++ [i])
-      when (final) $ getBlockBuilder >>= \(l, _, is) -> emitBlock $ Block (l, is)
+      setBlockFinalized (isFinalInstruction i)
+      (l, finalized, is) <- getBlockBuilder
+      if finalized then
+        emitBlock $ Block (l, is, i)
+      else
+        modifyBlockBuilder $ \(l, f, is) -> (l, f, is ++ [i])
 
 -- ConstantBuilderT helper functions.
 newConstant :: String -> Compiler Constant
