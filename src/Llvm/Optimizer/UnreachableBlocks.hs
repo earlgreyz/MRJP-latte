@@ -1,4 +1,4 @@
-module Llvm.Optimizer.Blocks (runRemoveUnreachableBlocks) where
+module Llvm.Optimizer.UnreachableBlocks (runRemoveUnreachableBlocks) where
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -12,7 +12,7 @@ neighbours bs = M.fromList $ flip map bs $ \b -> (blockLabel b, blockNeighbours 
   blockNeighbours (Block (_, _, i)) = case i of
     IBr l -> [l]
     IBrCond _ l r -> [l, r]
-    _ -> []
+    otherwise -> []
 
 -- Runs DFS to determine blocks reachable from the starting label.
 reachable :: Label -> M.Map Label [Label] -> S.Set Label
