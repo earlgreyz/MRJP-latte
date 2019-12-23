@@ -128,6 +128,9 @@ instance Show Block where
       indent :: String -> String
       indent s = "  " ++ s
 
+blockLabel :: Block -> Label
+blockLabel (Block (l, _, _)) = l
+
 -- Function definition.
 newtype Function = Function (Type, String, [(Type, Register)], [Block]) deriving Eq
 instance Show Function where
