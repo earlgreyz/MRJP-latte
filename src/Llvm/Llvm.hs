@@ -143,14 +143,14 @@ instance Show Function where
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
 -- Top definition declaration.
-data Declaration = DeclFun Type L.Ident String [Type]
+data Declaration = DeclFun Type L.Ident String [Type] deriving Eq
 instance Show Declaration where
   show (DeclFun r _ f args) =
     "declare " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate "," $ map show args) ++ ")"
 
 -- Program.
-newtype Program = Program ([Declaration], [Constant], [Function])
+newtype Program = Program ([Declaration], [Constant], [Function]) deriving Eq
 instance Show Program where
   show (Program (ds, cs, fs)) =
     (unlines $ map show ds) ++ "\n" ++
