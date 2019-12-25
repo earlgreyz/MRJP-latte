@@ -23,14 +23,12 @@ accessedRegisters i = case i of
     toRegister (VReg r) = return r
     toRegister _ = Nothing
 
+-- Registers accessed in the block.
 blockAccessedRegisters :: Block -> S.Set Register
 blockAccessedRegisters (Block (_, is, i)) =
   foldl S.union (accessedRegisters i) $ map accessedRegisters is
 
-functionAccessedRegisters :: Function -> S.Set Register
-functionAccessedRegisters (Function (_, _, _, bs)) =
-  foldl S.union S.empty $ map blockAccessedRegisters bs
-
+-- Removes unused register assignments in the given blocks.
 removeUnusedAssignments :: [Block] -> [Block]
 removeUnusedAssignments bs =
   let rs = foldl S.union S.empty $ map blockAccessedRegisters bs in
@@ -52,6 +50,7 @@ removeUnusedAssignments bs =
       IPhi _ _ r -> r `S.member` rs
       _ -> True
 
+-- Removes unused register assignments from functions in the given program.
 runRemoveUnusedAssignments :: Program -> Program
 runRemoveUnusedAssignments (Program (ds, cs, fs)) = Program (ds, cs, map optimize fs) where
   optimize :: Function -> Function
