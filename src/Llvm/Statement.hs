@@ -9,8 +9,8 @@ import Control.Monad.State
 import qualified Latte.AbsLatte as L
 import Latte.PrintLatte
 
-import Evaluate.Expression (tryEval)
-import qualified Evaluate.Value as E
+import Constexpr.Evaluate
+import qualified Constexpr.Value as C
 
 import Llvm.Compiler
 import Llvm.Expression
@@ -65,8 +65,8 @@ compileStmt (L.VRet _) = do
   emitInstruction $ IRet Tvoid (VInt 0)
   ask
 compileStmt (L.CondElse _ e st sf) = case tryEval e of
-  Just (E.VBool True) -> compileStmt st
-  Just (E.VBool False) -> compileStmt sf
+  Just (C.VBool True) -> compileStmt st
+  Just (C.VBool False) -> compileStmt sf
   Nothing -> do
     (_, b) <- compileExpr e
     tlabel <- freshLabel
@@ -86,8 +86,8 @@ compileStmt (L.CondElse _ e st sf) = case tryEval e of
     emitInstruction $ ILabel retlabel
     ask
 compileStmt (L.Cond _ e s) = case tryEval e of
-  Just (E.VBool True) -> compileStmt s
-  Just (E.VBool False) -> ask
+  Just (C.VBool True) -> compileStmt s
+  Just (C.VBool False) -> ask
   Nothing -> do
     (_, b) <- compileExpr e
     tlabel <- freshLabel
@@ -102,7 +102,7 @@ compileStmt (L.Cond _ e s) = case tryEval e of
     emitInstruction $ ILabel retlabel
     ask
 compileStmt (L.While _ e s) = case tryEval e of
-  Just (E.VBool True) -> do
+  Just (C.VBool True) -> do
     label <- freshLabel
     emitInstruction $ IBr label
     -- Body.
@@ -113,7 +113,7 @@ compileStmt (L.While _ e s) = case tryEval e of
     contlabel <- freshLabel
     emitInstruction $ ILabel contlabel
     ask
-  Just (E.VBool False) -> ask
+  Just (C.VBool False) -> ask
   Nothing -> do
     condlabel <- freshLabel
     bodylabel <- freshLabel

@@ -15,8 +15,8 @@ import Analyzer.Error
 import Analyzer.Expression
 import Analyzer.Util
 
-import Evaluate.Expression
-import Evaluate.Value
+import Constexpr.Evaluate
+import Constexpr.Value
 
 -- Special marker for the return environment.
 returnIdent :: Ident

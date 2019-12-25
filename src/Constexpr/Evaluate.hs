@@ -1,29 +1,16 @@
-module Evaluate.Expression where
+module Constexpr.Evaluate (tryEval) where
 
 import Control.Monad
 import Data.Maybe
 
 import Latte.AbsLatte
 
-import Evaluate.Value
-
-assertTypeMatches :: Value -> Value -> Maybe ()
-assertTypeMatches (VInt _) (VInt _) = return ()
-assertTypeMatches (VBool _) (VBool _) = return ()
-assertTypeMatches (VString _) (VString _) = return ()
-assertTypeMatches _ _ = Nothing
+import Constexpr.Util
+import Constexpr.Value
 
 cmpInts :: (Integer -> Integer -> Bool) -> Value -> Value -> Maybe Value
 cmpInts c (VInt n) (VInt m) = return $ VBool $ c n m
 cmpInts _ _ _= Nothing
-
-unquote ::String -> String
-unquote (h:t) =
-  if (h /= '\"') || (last t /= '\"') then
-    error $ "missing quotes in a string value"
-  else
-    init t
-unquote _ = error "missing quotes in a string value"
 
 tryEval :: (Expr a) -> Maybe Value
 tryEval (EVar _ _) = Nothing
@@ -47,7 +34,10 @@ tryEval (EAdd _ e op f) = case op of
   Plus _ -> do
     v <- tryEval e
     w <- tryEval f
-    v |+| w
+    case (v, w) of
+      (VInt n, VInt m) -> return $ VInt $ n + m
+      (VString s, VString t) -> return $ VString $ s ++ t
+      _ -> Nothing
   Minus _ -> do
     v <- tryEval e
     n <- requireInt v
@@ -59,10 +49,10 @@ tryEval (ERel _ e op f) = do
   w <- tryEval f
   case op of
     EQU _ -> do
-      assertTypeMatches v w
+      requireSameType v w
       return $ VBool $ v == w
     NE _ -> do
-      assertTypeMatches v w
+      requireSameType v w
       return $ VBool $ v /= w
     LTH _ -> cmpInts (<) v w
     LE _ -> cmpInts (<=) v w

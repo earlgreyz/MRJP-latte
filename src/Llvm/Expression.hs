@@ -4,8 +4,8 @@ import qualified Data.Map as M
 
 import qualified Latte.AbsLatte as L
 
-import Evaluate.Expression
-import qualified Evaluate.Value as E
+import Constexpr.Evaluate
+import qualified Constexpr.Value as C
 
 import Llvm.Compiler
 import Llvm.Llvm
@@ -16,9 +16,9 @@ compileExpr :: (L.Expr a) -> Compiler (Type, Value)
 compileExpr e = case tryEval e of
   Nothing -> doCompileExpr e
   Just x -> case x of
-    E.VInt n -> return (Ti32, VInt n)
-    E.VBool b -> return (Ti1, VBool b)
-    E.VString s -> newConstant s >>= \c -> return (Ptr Ti8, VConst c)
+    C.VInt n -> return (Ti32, VInt n)
+    C.VBool b -> return (Ti1, VBool b)
+    C.VString s -> newConstant s >>= \c -> return (Ptr Ti8, VConst c)
 
 -- Actual expression compilation. Should not be called directly.
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
