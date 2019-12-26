@@ -4,6 +4,8 @@ import qualified Latte.AbsLatte as L
 
 import Data.List
 
+import Util.String
+
 -- Register names.
 newtype Register = Register Integer deriving (Eq, Ord)
 instance Show Register where
@@ -26,14 +28,6 @@ instance Show Constant where
   show (Constant i s) = intercalate "" [
     "@const_", show i, " = private unnamed_addr constant [",
     show (1 + length s), " x i8] c\"", escape s, "\\00\", align 1" ]
-    where
-      escape :: String -> String
-      escape [] = []
-      escape ('\t':s) = '\\':'0':'9':escape s
-      escape ('\n':s) = '\\':'0':'a':escape s
-      escape ('\"':s) = '\\':'2':'2':escape s
-      escape ('\\':s) = '\\':'5':'c':escape s
-      escape (a:s) = a:escape s
 
 -- LLVM types.
 data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type deriving (Eq, Ord)

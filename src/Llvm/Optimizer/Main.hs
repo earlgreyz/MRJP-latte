@@ -1,5 +1,7 @@
 module Llvm.Optimizer.Main (runOptimizer) where
 
+import Util.Function
+
 import Llvm.Llvm
 import Llvm.Util
 

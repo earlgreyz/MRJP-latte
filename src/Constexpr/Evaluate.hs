@@ -3,6 +3,8 @@ module Constexpr.Evaluate (tryEval) where
 import Control.Monad
 import Data.Maybe
 
+import Util.String
+
 import Latte.AbsLatte
 
 import Constexpr.Util
