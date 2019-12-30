@@ -31,14 +31,15 @@ data Stmt a
     = Empty a
     | BStmt a (Block a)
     | Decl a (Type a) [Item a]
-    | Ass a Ident (Expr a)
-    | Incr a Ident
-    | Decr a Ident
+    | Ass a (LValue a) (Expr a)
+    | Incr a (LValue a)
+    | Decr a (LValue a)
     | Ret a (Expr a)
     | VRet a
     | Cond a (Expr a) (Stmt a)
     | CondElse a (Expr a) (Stmt a) (Stmt a)
     | While a (Expr a) (Stmt a)
+    | ForEach a (Type a) Ident (Expr a) (Stmt a)
     | SExp a (Expr a)
   deriving (Eq, Ord, Show, Read)
 
@@ -47,14 +48,15 @@ instance Functor Stmt where
         Empty a -> Empty (f a)
         BStmt a block -> BStmt (f a) (fmap f block)
         Decl a type_ items -> Decl (f a) (fmap f type_) (map (fmap f) items)
-        Ass a ident expr -> Ass (f a) ident (fmap f expr)
-        Incr a ident -> Incr (f a) ident
-        Decr a ident -> Decr (f a) ident
+        Ass a lvalue expr -> Ass (f a) (fmap f lvalue) (fmap f expr)
+        Incr a lvalue -> Incr (f a) (fmap f lvalue)
+        Decr a lvalue -> Decr (f a) (fmap f lvalue)
         Ret a expr -> Ret (f a) (fmap f expr)
         VRet a -> VRet (f a)
         Cond a expr stmt -> Cond (f a) (fmap f expr) (fmap f stmt)
         CondElse a expr stmt1 stmt2 -> CondElse (f a) (fmap f expr) (fmap f stmt1) (fmap f stmt2)
         While a expr stmt -> While (f a) (fmap f expr) (fmap f stmt)
+        ForEach a type_ ident expr stmt -> ForEach (f a) (fmap f type_) ident (fmap f expr) (fmap f stmt)
         SExp a expr -> SExp (f a) (fmap f expr)
 data Item a = NoInit a Ident | Init a Ident (Expr a)
   deriving (Eq, Ord, Show, Read)
@@ -63,26 +65,38 @@ instance Functor Item where
     fmap f x = case x of
         NoInit a ident -> NoInit (f a) ident
         Init a ident expr -> Init (f a) ident (fmap f expr)
+data LValue a = LVar a Ident | LAt a (Expr a) (Expr a)
+  deriving (Eq, Ord, Show, Read)
 
+instance Functor LValue where
+    fmap f x = case x of
+        LVar a ident -> LVar (f a) ident
+        LAt a expr1 expr2 -> LAt (f a) (fmap f expr1) (fmap f expr2)
 data Type a
-    = Int a | Str a | Bool a | Void a | Fun a (Type a) [Type a]
-    deriving (Ord, Read)
+    = Int a
+    | Str a
+    | Bool a
+    | Void a
+    | Array a (Type a)
+    | Fun a (Type a) [Type a]
+  deriving (Ord, Read)
 
--- Custom definition for type equality.
 instance Eq (Type a) where
-    (Int _) == (Int _) = True
-    (Str _) == (Str _) = True
-    (Bool _) == (Bool _) = True
-    (Void _) == (Void _) = True
-    (Fun _ r t) == (Fun _ rr tt) = (r == rr) && (t == tt)
-    _ == _ = False
+  (Int _) == (Int _) = True
+  (Str _) == (Str _) = True
+  (Bool _) == (Bool _) = True
+  (Void _) == (Void _) = True
+  (Array _ t) == (Array _ tt) = t == tt
+  (Fun _ r t) == (Fun _ rr tt) = (r == rr) && (t == tt)
+  _ == _ = False
 
 instance Show (Type a) where
-    show (Int _) = "int"
-    show (Str _) = "str"
-    show (Bool _) = "bool"
-    show (Void _) = "void"
-    show (Fun _ r t) = (show r) ++ "(" ++ (intercalate ", " $ map show t) ++ ")"
+  show (Int _) = "int"
+  show (Str _) = "str"
+  show (Bool _) = "bool"
+  show (Void _) = "void"
+  show (Array _ t) = "[" ++ (show t) ++ "]"
+  show (Fun _ r t) = (show r) ++ "(" ++ (intercalate ", " $ map show t) ++ ")"
 
 instance Functor Type where
     fmap f x = case x of
@@ -90,15 +104,16 @@ instance Functor Type where
         Str a -> Str (f a)
         Bool a -> Bool (f a)
         Void a -> Void (f a)
+        Array a type_ -> Array (f a) (fmap f type_)
         Fun a type_ types -> Fun (f a) (fmap f type_) (map (fmap f) types)
-
 data Expr a
-    = EVar a Ident
-    | ELitInt a Integer
+    = ELitInt a Integer
     | ELitTrue a
     | ELitFalse a
-    | EApp a Ident [Expr a]
     | EString a String
+    | EVar a (LValue a)
+    | EApp a Ident [Expr a]
+    | ELength a (Expr a)
     | Neg a (Expr a)
     | Not a (Expr a)
     | EMul a (Expr a) (MulOp a) (Expr a)
@@ -106,16 +121,18 @@ data Expr a
     | ERel a (Expr a) (RelOp a) (Expr a)
     | EAnd a (Expr a) (Expr a)
     | EOr a (Expr a) (Expr a)
+    | ENew a (Type a) (Expr a)
   deriving (Eq, Ord, Show, Read)
 
 instance Functor Expr where
     fmap f x = case x of
-        EVar a ident -> EVar (f a) ident
         ELitInt a integer -> ELitInt (f a) integer
         ELitTrue a -> ELitTrue (f a)
         ELitFalse a -> ELitFalse (f a)
-        EApp a ident exprs -> EApp (f a) ident (map (fmap f) exprs)
         EString a string -> EString (f a) string
+        EVar a lvalue -> EVar (f a) (fmap f lvalue)
+        EApp a ident exprs -> EApp (f a) ident (map (fmap f) exprs)
+        ELength a expr -> ELength (f a) (fmap f expr)
         Neg a expr -> Neg (f a) (fmap f expr)
         Not a expr -> Not (f a) (fmap f expr)
         EMul a expr1 mulop expr2 -> EMul (f a) (fmap f expr1) (fmap f mulop) (fmap f expr2)
@@ -123,6 +140,7 @@ instance Functor Expr where
         ERel a expr1 relop expr2 -> ERel (f a) (fmap f expr1) (fmap f relop) (fmap f expr2)
         EAnd a expr1 expr2 -> EAnd (f a) (fmap f expr1) (fmap f expr2)
         EOr a expr1 expr2 -> EOr (f a) (fmap f expr1) (fmap f expr2)
+        ENew a type_ expr -> ENew (f a) (fmap f type_) (fmap f expr)
 data AddOp a = Plus a | Minus a
   deriving (Eq, Ord, Show, Read)
 

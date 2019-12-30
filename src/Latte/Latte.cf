@@ -30,11 +30,11 @@ Init.      Item ::= Ident "=" Expr ;
 
 separator nonempty Item "," ;
 
-Ass.       Stmt ::= Ident "=" Expr  ";" ;
+Ass.       Stmt ::= LValue "=" Expr ";" ;
 
-Incr.      Stmt ::= Ident "++"  ";" ;
+Incr.      Stmt ::= LValue "++"  ";" ;
 
-Decr.      Stmt ::= Ident "--"  ";" ;
+Decr.      Stmt ::= LValue "--"  ";" ;
 
 Ret.       Stmt ::= "return" Expr ";" ;
 
@@ -46,7 +46,15 @@ CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
 
 While.     Stmt ::= "while" "(" Expr ")" Stmt ;
 
+ForEach.   Stmt ::= "for" "(" Type Ident ":" Expr ")" Stmt ;
+
 SExp.      Stmt ::= Expr  ";" ;
+
+-- LValues ------------------------------------------------
+
+LVar.      LValue ::= Ident ;
+
+LAt.       LValue ::= Expr6 "[" Expr "]" ;
 
 -- Types ---------------------------------------------------
 
@@ -58,23 +66,27 @@ Bool.      Type ::= "boolean" ;
 
 Void.      Type ::= "void" ;
 
+Array.     Type ::= Type "[]";
+
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 
 separator  Type "," ;
 
 -- Expressions ---------------------------------------------
 
-EVar.      Expr6 ::= Ident ;
+ELitInt.   Expr7 ::= Integer ;
 
-ELitInt.   Expr6 ::= Integer ;
+ELitTrue.  Expr7 ::= "true" ;
 
-ELitTrue.  Expr6 ::= "true" ;
+ELitFalse. Expr7 ::= "false" ;
 
-ELitFalse. Expr6 ::= "false" ;
+EString.   Expr7 ::= String ;
+
+EVar.      Expr6 ::= LValue ;
 
 EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 
-EString.   Expr6 ::= String ;
+ELength.   Expr5 ::= Expr6 "." "length" ;
 
 Neg.       Expr5 ::= "-" Expr6 ;
 
@@ -90,7 +102,9 @@ EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
 
 EOr.       Expr ::= Expr1 "||" Expr ;
 
-coercions  Expr 6 ;
+ENew.      Expr ::= "new" Type "[" Expr "]" ;
+
+coercions  Expr 7 ;
 
 separator  Expr "," ;
 
@@ -125,3 +139,4 @@ comment    "#" ;
 comment    "//" ;
 
 comment    "/*" "*/" ;
+

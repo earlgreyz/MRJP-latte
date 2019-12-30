@@ -29,34 +29,41 @@ transStmt x = case x of
   Empty _ -> failure x
   BStmt _ block -> failure x
   Decl _ type_ items -> failure x
-  Ass _ ident expr -> failure x
-  Incr _ ident -> failure x
-  Decr _ ident -> failure x
+  Ass _ lvalue expr -> failure x
+  Incr _ lvalue -> failure x
+  Decr _ lvalue -> failure x
   Ret _ expr -> failure x
   VRet _ -> failure x
   Cond _ expr stmt -> failure x
   CondElse _ expr stmt1 stmt2 -> failure x
   While _ expr stmt -> failure x
+  ForEach _ type_ ident expr stmt -> failure x
   SExp _ expr -> failure x
 transItem :: Show a => Item a -> Result
 transItem x = case x of
   NoInit _ ident -> failure x
   Init _ ident expr -> failure x
+transLValue :: Show a => LValue a -> Result
+transLValue x = case x of
+  LVar _ ident -> failure x
+  LAt _ expr1 expr2 -> failure x
 transType :: Show a => Type a -> Result
 transType x = case x of
   Int _ -> failure x
   Str _ -> failure x
   Bool _ -> failure x
   Void _ -> failure x
+  Array _ type_ -> failure x
   Fun _ type_ types -> failure x
 transExpr :: Show a => Expr a -> Result
 transExpr x = case x of
-  EVar _ ident -> failure x
   ELitInt _ integer -> failure x
   ELitTrue _ -> failure x
   ELitFalse _ -> failure x
-  EApp _ ident exprs -> failure x
   EString _ string -> failure x
+  EVar _ lvalue -> failure x
+  EApp _ ident exprs -> failure x
+  ELength _ expr -> failure x
   Neg _ expr -> failure x
   Not _ expr -> failure x
   EMul _ expr1 mulop expr2 -> failure x
@@ -64,6 +71,7 @@ transExpr x = case x of
   ERel _ expr1 relop expr2 -> failure x
   EAnd _ expr1 expr2 -> failure x
   EOr _ expr1 expr2 -> failure x
+  ENew _ type_ expr -> failure x
 transAddOp :: Show a => AddOp a -> Result
 transAddOp x = case x of
   Plus _ -> failure x
