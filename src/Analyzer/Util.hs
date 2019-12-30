@@ -12,8 +12,6 @@ import Analyzer.Analyzer
 import Analyzer.Error
 
 mustLookup :: ErrPos -> Ident -> Analyzer (Type ErrPos)
-mustLookup a x = do
-  env <- ask
-  case M.lookup x env of
-    Nothing -> throwError $ undefinedError a x
-    Just (_, t) -> return t
+mustLookup a x = ask >>= \env -> case M.lookup x env of
+  Nothing -> throwError $ undefinedError a x
+  Just (_, t) -> return t

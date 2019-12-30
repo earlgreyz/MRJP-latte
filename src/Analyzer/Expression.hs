@@ -1,7 +1,8 @@
-module Analyzer.Expression (analyzeExpr) where
+module Analyzer.Expression (analyzeExpr, analyzeLValue) where
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import qualified Data.Map as M
 
 import Latte.AbsLatte
 import Latte.ErrLatte
@@ -25,8 +26,18 @@ analyzeBinaryExpr e f t = do
   assertType (getExprErrPos f) t tf
   return te
 
+analyzeLValue :: (LValue ErrPos) -> Analyzer (Type ErrPos)
+analyzeLValue (LVar a x) = mustLookup a x
+analyzeLValue (LAt a x i) = do
+  it <- analyzeExpr i
+  assertType a (Int Nothing) it
+  xt <- analyzeExpr x
+  case xt of
+    Array _ t -> return t
+    otherwise -> throwError $ arrayError a x xt
+
 analyzeExpr :: (Expr ErrPos) -> Analyzer (Type ErrPos)
-analyzeExpr (EVar a x) = mustLookup a x
+analyzeExpr (EVar _ x) = analyzeLValue x
 analyzeExpr (ELitInt a n) = do
   unless (n >= -2147483648 && n < 2147483647) $ throwError $ overflowError a n
   return $ Int a
@@ -40,6 +51,9 @@ analyzeExpr (EApp a f args) = do
       unless (ts == tts) $ throwError $ argumentsError a f ts tts
       return r
     tt -> throwError $ functionError a f tt
+analyzeExpr (ELength a e) = analyzeExpr e >>= \t -> case t of
+  Array _ _ -> return $ Int a
+  otherwise -> throwError $ arrayError a e t
 analyzeExpr (EString a s) = do
   if (length s < 2) || (head s /= '\"') || (last s /= '\"') then
     throwError $ missingQuotesError a
@@ -67,3 +81,7 @@ analyzeExpr (ERel a e op f) = case op of
     return $ Bool a
 analyzeExpr (EAnd a e f) = analyzeBinaryExpr e f (Bool a)
 analyzeExpr (EOr a e f) = analyzeBinaryExpr e f (Bool a)
+analyzeExpr (ENew a t e) = do
+  te <- analyzeExpr e
+  assertType a (Int Nothing) te
+  return $ Array a t

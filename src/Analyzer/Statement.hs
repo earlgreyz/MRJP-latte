@@ -1,13 +1,15 @@
-module Analyzer.Statement where
+module Analyzer.Statement (analyzeStmt, analyzeBlock, startBlock, insertRet) where
 
 import qualified Data.Map as M
 
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.Foldable
 
 import Latte.AbsLatte
 import Latte.ErrLatte
+import Latte.PrintLatte
 
 import Analyzer.Analyzer
 import Analyzer.Assert
@@ -18,14 +20,6 @@ import Analyzer.Util
 import Constexpr.Evaluate
 import Constexpr.Value
 
--- Special marker for the return environment.
-returnIdent :: Ident
-returnIdent = Ident "return"
-
--- Insert function return type into the environment.
-insertRet :: (Type ErrPos) -> Env -> Env
-insertRet t env = M.insert returnIdent (True, t) env
-
 -- Change _declared in current block_ to false.
 startBlock :: Env -> Env
 startBlock env = M.map (\(_, t) -> (False, t)) env
@@ -35,10 +29,10 @@ analyzeBlock (Block _ ss) =
   local (\env -> startBlock env) $ analyzeManyStmt ss
 
 analyzeManyStmt :: [Stmt ErrPos] -> Analyzer ()
-analyzeManyStmt [] = return ()
-analyzeManyStmt (s:ss) = do
-  env <- analyzeStmt s
-  local (\_ -> env) $ analyzeManyStmt ss
+analyzeManyStmt ss = do
+  env <- ask
+  foldlM (\env s -> local (const env) $ analyzeStmt s) env ss
+  return ()
 
 declare :: Type ErrPos -> Item ErrPos -> Analyzer Env
 declare t (NoInit a x) = do
@@ -51,6 +45,14 @@ declare t (Init a x e) = do
   tt <- analyzeExpr e
   unless (t == tt) $ throwError $ typeMismatchError tt x t
   return $ M.insert x (True, t) env
+
+-- Special marker for the return environment.
+returnIdent :: Ident
+returnIdent = Ident "return"
+
+-- Insert function return type into the environment.
+insertRet :: (Type ErrPos) -> Env -> Env
+insertRet t env = M.insert returnIdent (True, t) env
 
 analyzeReturn :: ErrPos -> Type ErrPos -> Analyzer Env
 analyzeReturn a tt = do
@@ -75,12 +77,12 @@ analyzeStmt (Decl a t (x:xs)) = do
   env <- declare t x
   local (\_ -> env) $ analyzeStmt (Decl Nothing t xs)
 analyzeStmt (Ass a x e) = do
-  t <- mustLookup a x
+  t <- analyzeLValue x
   tt <- analyzeExpr e
   unless (t == tt) $ throwError $ typeMismatchError tt x t
   ask
 analyzeStmt (Incr a x) = do
-  t <- mustLookup a x
+  t <- analyzeLValue x
   unless (t == (Int Nothing)) $ throwError $ intExpectedError a x t
   ask
 analyzeStmt (Decr a x) = analyzeStmt $ Incr a x
@@ -105,4 +107,11 @@ analyzeStmt (CondElse _ e st sf) = do
   ask
 analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
 analyzeStmt (While a e s) = analyzeStmt (Cond a e s)
+analyzeStmt (ForEach a t x array s) = do
+  at <- analyzeExpr array
+  case at of
+    Array _ tt -> assertType a tt t
+    otherwise -> throwError $ arrayError a array at
+  local (\env -> M.insert x (True, t) env) $ analyzeStmt s
+  ask
 analyzeStmt (SExp a e) = analyzeExpr e >> ask
