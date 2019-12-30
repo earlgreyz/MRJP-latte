@@ -72,3 +72,4 @@ tryEval (EOr _ e f) = do
   w <- tryEval f
   c <- requireBool w
   return $ VBool $ b || c
+tryEval (ENew _ _ _) = Nothing

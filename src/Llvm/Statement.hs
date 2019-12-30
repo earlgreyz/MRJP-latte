@@ -41,6 +41,7 @@ compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
     L.Int a -> L.ELitInt a 0
     L.Bool a -> L.ELitFalse a
     L.Str a -> L.EString a "\"\""
+    L.Array a t -> L.ENew a t (L.ELitInt a 0)
 
 compileStmt :: L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask
@@ -48,10 +49,9 @@ compileStmt (L.BStmt _ b) = compileBlock b >> ask
 compileStmt (L.Decl _ t ds) = ask >>= \env ->
   foldlM (\env d -> local (const env) $ compileDecl t d) env ds
 compileStmt (L.Ass _ x e) = do
-  vs <- askVariables
-  let (_, reg) = vs M.! x
+  (_, ptr) <- getValuePointer x
   (t, v) <- compileExpr e
-  emitInstruction $ IStore t v reg
+  emitInstruction $ IStore t v ptr
   ask
 compileStmt (L.Incr a x) = compileStmt $ L.Ass a x (
   L.EAdd a (L.EVar a x) (L.Plus a) (L.ELitInt a 1))

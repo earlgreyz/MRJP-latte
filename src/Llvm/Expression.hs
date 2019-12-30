@@ -1,4 +1,4 @@
-module Llvm.Expression (compileExpr) where
+module Llvm.Expression (compileExpr, getValuePointer) where
 
 import qualified Data.Map as M
 
@@ -10,6 +10,7 @@ import qualified Constexpr.Value as C
 import Llvm.Compiler
 import Llvm.Llvm
 import Llvm.Internal
+import Llvm.Util
 
 -- Compiles expression simplifying constants.
 compileExpr :: (L.Expr a) -> Compiler (Type, Value)
@@ -20,12 +21,24 @@ compileExpr e = case tryEval e of
     C.VBool b -> return (Ti1, VBool b)
     C.VString s -> newConstant s >>= \c -> return (Ptr Ti8, VConst c)
 
+-- Returns register storing lvalue pointer.
+getValuePointer :: (L.LValue a) -> Compiler (Type, Register)
+getValuePointer (L.LVar _ x) = do
+  vs <- askVariables
+  return $ vs M.! x
+getValuePointer (L.LAt _ x e) = do
+  (_, i) <- compileExpr e
+  reg <- freshRegister
+  (at, a) <- compileExpr x
+  let t = pointerInnerType at
+  emitInstruction $ IGetElementPtr at a i reg
+  return (at, reg)
+
 -- Actual expression compilation. Should not be called directly.
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
 doCompileExpr (L.EVar _ x) = do
-  vs <- askVariables
+  (t, ptr) <- getValuePointer x
   reg <- freshRegister
-  let (t, ptr) = vs M.! x
   emitInstruction $ ILoad t (VReg ptr) reg
   return (t, VReg reg)
 doCompileExpr (L.EApp _ f args) = do

@@ -10,6 +10,12 @@ convertType t = case t of
   L.Int _ -> Ti32
   L.Bool _ -> Ti1
   L.Str _ -> Ptr Ti8
+  L.Array _ t -> Ptr $ convertType t
+
+pointerInnerType :: Type -> Type
+pointerInnerType t = case t of
+  Ptr t -> t
+  otherwise -> error "expected pointer type"
 
 convertFunctionName :: L.Ident -> String
 convertFunctionName (L.Ident s) =

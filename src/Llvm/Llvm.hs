@@ -62,6 +62,8 @@ data Instruction
   | IAlloca Type Register
   | IIcmp Cond Type Value Value Register
   | IPhi Type [(Value, Label)] Register
+  | IArrAlloca Type Value Register
+  | IGetElementPtr Type Value Value Register
   | IComment String
   deriving Eq
 instance Show Instruction where
@@ -93,6 +95,11 @@ instance Show Instruction where
     where
       showArg :: (Value, Label) -> String
       showArg (v, l) = "[" ++ show v ++ ", %" ++ show l ++ "]"
+  show (IArrAlloca t len res) =
+    show res ++ " = alloca " ++ show t ++  ", i32 " ++ show len
+  show (IGetElementPtr t a i res) = intercalate " " [
+    show res, "= getelementptr inbounds", show t ++ ",",
+    show (Ptr t), show a ++ ",", show Ti32, show i]
   show (IComment s) = "; " ++ s
 
 -- Arithmetic operations.
