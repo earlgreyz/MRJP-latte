@@ -57,7 +57,7 @@ data Instruction
   | IBr Label
   | IBrCond Value Label Label
   | ILabel Label
-  | ILoad Type Register Register
+  | ILoad Type Value Register
   | IStore Type Value Register
   | IAlloca Type Register
   | IIcmp Cond Type Value Value Register
@@ -124,6 +124,9 @@ instance Show Block where
 
 blockLabel :: Block -> Label
 blockLabel (Block (l, _, _)) = l
+
+blockInstructions :: Block -> [Instruction]
+blockInstructions (Block (_, is, _)) = is
 
 -- Function definition.
 newtype Function = Function (Type, String, [(Type, Register)], [Block]) deriving Eq

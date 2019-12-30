@@ -13,7 +13,7 @@ accessedRegisters i = case i of
   IRet _ x -> S.fromList $ mapMaybe toRegister [x]
   IArithm _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   IBrCond x _ _ -> S.fromList $ mapMaybe toRegister [x]
-  ILoad _ r _ -> S.fromList $ [r]
+  ILoad _ x _ -> S.fromList $ mapMaybe toRegister [x]
   IStore _ x r -> S.fromList (r:mapMaybe toRegister [x])
   IIcmp _ _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   IPhi _ args _ -> S.fromList $ mapMaybe (toRegister . fst) args

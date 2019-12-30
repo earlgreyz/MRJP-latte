@@ -26,7 +26,7 @@ doCompileExpr (L.EVar _ x) = do
   vs <- askVariables
   reg <- freshRegister
   let (t, ptr) = vs M.! x
-  emitInstruction $ ILoad t ptr reg
+  emitInstruction $ ILoad t (VReg ptr) reg
   return (t, VReg reg)
 doCompileExpr (L.EApp _ f args) = do
   fs <- askFunctions
