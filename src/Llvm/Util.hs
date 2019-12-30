@@ -10,12 +10,22 @@ convertType t = case t of
   L.Int _ -> Ti32
   L.Bool _ -> Ti1
   L.Str _ -> Ptr Ti8
-  L.Array _ t -> Ptr $ convertType t
+  L.Array _ t -> Array $ convertType t
 
-pointerInnerType :: Type -> Type
-pointerInnerType t = case t of
-  Ptr t -> t
-  otherwise -> error "expected pointer type"
+typeSize :: Type -> Integer
+typeSize t = case t of
+  Ti64 -> 8
+  Ti32 -> 4
+  Ti8 -> 1
+  Ti1 -> 1
+  Ptr _ -> typeSize Ti64
+  Array _ -> typeSize Ti64
+  Tvoid -> error "void type has no size"
+
+arrayType :: Type -> Type
+arrayType t = case t of
+  Array t -> t
+  otherwise -> error "expected array type"
 
 convertFunctionName :: L.Ident -> String
 convertFunctionName (L.Ident s) =

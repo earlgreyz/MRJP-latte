@@ -30,13 +30,14 @@ instance Show Constant where
     show (1 + length s), " x i8] c\"", escape s, "\\00\", align 1" ]
 
 -- LLVM types.
-data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type deriving (Eq, Ord)
+data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type | Array Type deriving (Eq, Ord)
 instance Show Type where
   show Ti64 = "i64"
   show Ti32 = "i32"
   show Ti8 = "i8"
   show Ti1 = "i1"
   show Tvoid = "void"
+  show (Array t) = show (Ptr Ti8)
   show (Ptr t) = (show t) ++ "*"
 
 -- LLVM values.
@@ -63,6 +64,7 @@ data Instruction
   | IIcmp Cond Type Value Value Register
   | IPhi Type [(Value, Label)] Register
   | IArrAlloca Type Value Register
+  | IBitcast Type Value Type Register
   | IGetElementPtr Type Value Value Register
   | IComment String
   deriving Eq
@@ -97,6 +99,8 @@ instance Show Instruction where
       showArg (v, l) = "[" ++ show v ++ ", %" ++ show l ++ "]"
   show (IArrAlloca t len res) =
     show res ++ " = alloca " ++ show t ++  ", i32 " ++ show len
+  show (IBitcast t v tres res) =
+    show res ++ " = bitcast " ++ show t ++ " " ++ show v ++ " to " ++ show tres
   show (IGetElementPtr t a i res) = intercalate " " [
     show res, "= getelementptr inbounds", show t ++ ",",
     show (Ptr t), show a ++ ",", show Ti32, show i]

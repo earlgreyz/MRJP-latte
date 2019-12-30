@@ -21,6 +21,18 @@ compileExpr e = case tryEval e of
     C.VBool b -> return (Ti1, VBool b)
     C.VString s -> newConstant s >>= \c -> return (Ptr Ti8, VConst c)
 
+-- Calculates array offset.
+arrayOffset :: Type -> Value -> Compiler Value
+arrayOffset t index = case index of
+  VInt n -> return (VInt $ (typeSize Ti32) + (typeSize t) * n)
+  otherwise -> do
+    tmp <- freshRegister
+    emitInstruction $ IArithm OpMul index (VInt (typeSize $ t)) tmp
+    -- First bytes are used to store the array size.
+    reg <- freshRegister
+    emitInstruction $ IArithm OpAdd (VReg tmp) (VInt (typeSize $ Ti32)) reg
+    return $ VReg reg
+
 -- Returns register storing lvalue pointer.
 getValuePointer :: (L.LValue a) -> Compiler (Type, Register)
 getValuePointer (L.LVar _ x) = do
@@ -30,7 +42,7 @@ getValuePointer (L.LAt _ x e) = do
   (_, i) <- compileExpr e
   reg <- freshRegister
   (at, a) <- compileExpr x
-  let t = pointerInnerType at
+  let t = arrayType at
   emitInstruction $ IGetElementPtr at a i reg
   return (at, reg)
 
@@ -157,3 +169,25 @@ doCompileExpr (L.EOr _ e f) = do
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool True, evlabel), (w, ewlabel)] reg
   return (Ti1, VReg reg)
+doCompileExpr (L.ENew _ t e) = do
+  (_, len) <- compileExpr e
+  let innerType = convertType t
+  -- Allocate array as bytes to store the size in front of the data.
+  size <- arrayOffset innerType len
+  array <- freshRegister
+  emitInstruction $ IArrAlloca Ti8 size array
+  -- Store the size.
+  sizeLocation <- freshRegister
+  emitInstruction $ IBitcast (Ptr Ti8) (VReg array) (Ptr Ti32) sizeLocation
+  emitInstruction $ IStore Ti32 len sizeLocation
+  return (Array innerType, VReg array)
+doCompileExpr (L.ELength _ e) = do
+  (t, array) <- compileExpr e
+  let innerType = arrayType t
+  -- Convert array address to a size pointer.
+  sizeLocation <- freshRegister
+  emitInstruction $ IBitcast (Ptr Ti8) array (Ptr Ti32) sizeLocation
+  -- Load value from the size pointer.
+  reg <- freshRegister
+  emitInstruction $ ILoad Ti32 (VReg sizeLocation) reg
+  return (Ti32, VReg reg)
