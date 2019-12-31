@@ -15,6 +15,7 @@ import qualified Constexpr.Value as C
 import Llvm.Compiler
 import Llvm.Expression
 import Llvm.Llvm
+import Llvm.Util
 
 compileBlock :: L.Block a -> Compiler ()
 compileBlock (L.Block _ ss) = do
@@ -122,7 +123,6 @@ compileStmt (L.While _ e s) = case tryEval e of
     -- Conditional.
     emitInstruction $ ILabel condlabel
     (_, b) <- compileExpr e
-    emitInstruction $ IComment $ printTree e
     emitInstruction $ IBrCond b bodylabel contlabel
     -- Body.
     emitInstruction $ ILabel bodylabel

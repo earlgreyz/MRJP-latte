@@ -1,4 +1,4 @@
-module Llvm.Expression (compileExpr, getValuePointer) where
+module Llvm.Expression (compileExpr, getValuePointer, arrayOffset) where
 
 import qualified Data.Map as M
 
@@ -39,12 +39,19 @@ getValuePointer (L.LVar _ x) = do
   vs <- askVariables
   return $ vs M.! x
 getValuePointer (L.LAt _ x e) = do
+  -- Index.
   (_, i) <- compileExpr e
   reg <- freshRegister
-  (at, a) <- compileExpr x
+  -- Array.
+  (at, array) <- compileExpr x
   let t = arrayType at
-  emitInstruction $ IGetElementPtr at a i reg
-  return (at, reg)
+  -- Calculate element offset.
+  offset <- arrayOffset t i
+  element <- freshRegister
+  emitInstruction $ IGetElementPtr Ti8 array offset element
+  reg <- freshRegister
+  emitInstruction $ IBitcast (Ptr Ti8) (VReg element) (Ptr t) reg
+  return (t, reg)
 
 -- Actual expression compilation. Should not be called directly.
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
