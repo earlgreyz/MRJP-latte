@@ -48,4 +48,5 @@ compileTopDef f@(L.FnDef _ t _ args block) = do
       Ti1 -> emitInstruction $ IRet Ti1 (VBool False)
       Ti32 -> emitInstruction $ IRet Ti32 (VInt 0)
       Ptr Ti8 -> newConstant "" >>= \c -> emitInstruction $ IRet (Ptr Ti8) (VConst c)
+      Array t -> newConstant "\0\0\0\0" >>= \c -> emitInstruction $ IRet (Array t) (VConst c)
       _ -> error "unknown type"

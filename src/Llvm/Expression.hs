@@ -182,7 +182,7 @@ doCompileExpr (L.ENew _ t e) = do
   -- Allocate array as bytes to store the size in front of the data.
   size <- arrayOffset innerType len
   array <- freshRegister
-  emitInstruction $ IArrAlloca Ti8 size array
+  emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, size)] (Just array)
   -- Store the size.
   sizeLocation <- freshRegister
   emitInstruction $ IBitcast (Ptr Ti8) (VReg array) (Ptr Ti32) sizeLocation

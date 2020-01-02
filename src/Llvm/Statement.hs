@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Llvm.Statement (compileStmt, compileBlock) where
 
 import Data.Foldable
@@ -44,7 +45,7 @@ compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
     L.Str a -> L.EString a "\"\""
     L.Array a t -> L.ENew a t (L.ELitInt a 0)
 
-compileStmt :: L.Stmt a -> Compiler Env
+compileStmt :: forall a. L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask
 compileStmt (L.BStmt _ b) = compileBlock b >> ask
 compileStmt (L.Decl _ t ds) = ask >>= \env ->
@@ -131,4 +132,21 @@ compileStmt (L.While _ e s) = case tryEval e of
     -- Continue.
     emitInstruction $ ILabel contlabel
     ask
+compileStmt (L.ForEach a t x array s) = compileBlock block >> ask
+  where
+    counterIdent :: L.Ident
+    counterIdent = L.Ident "for"
+    counterLValue :: L.LValue a
+    counterLValue = L.LVar a counterIdent
+    counterExpr :: L.Expr a
+    counterExpr = L.EVar a counterLValue
+    block :: L.Block a
+    block = L.Block a [
+      L.Decl a (L.Int a) [L.Init a counterIdent (L.ELitInt a 0)],
+      L.Decl a t [L.NoInit a x],
+      L.While a (L.ERel a counterExpr (L.LTH a) (L.ELength a array)) (L.BStmt a $ L.Block a [
+        L.Ass a (L.LVar a x) (L.EVar a $ L.LAt a array counterExpr),
+        s,
+        L.Incr a counterLValue])]
+
 compileStmt (L.SExp _ e) = compileExpr e >> ask

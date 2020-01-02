@@ -63,7 +63,6 @@ data Instruction
   | IAlloca Type Register
   | IIcmp Cond Type Value Value Register
   | IPhi Type [(Value, Label)] Register
-  | IArrAlloca Type Value Register
   | IBitcast Type Value Type Register
   | IGetElementPtr Type Value Value Register
   | IComment String
@@ -97,8 +96,6 @@ instance Show Instruction where
     where
       showArg :: (Value, Label) -> String
       showArg (v, l) = "[" ++ show v ++ ", %" ++ show l ++ "]"
-  show (IArrAlloca t len res) =
-    show res ++ " = alloca " ++ show t ++  ", i32 " ++ show len
   show (IBitcast t v tres res) =
     show res ++ " = bitcast " ++ show t ++ " " ++ show v ++ " to " ++ show tres
   show (IGetElementPtr t a i res) = intercalate " " [

@@ -14,6 +14,11 @@ stringsEqual = "stringsEqual"
 stringsEqualIdent :: L.Ident
 stringsEqualIdent = L.Ident stringsEqual
 
+malloc :: String
+malloc = "malloc"
+mallocIdent :: L.Ident
+mallocIdent = L.Ident malloc
+
 internalFunctions :: [Declaration]
 internalFunctions = [
   DeclFun Tvoid (L.Ident "printInt") "printInt" [Ti32],
@@ -22,4 +27,5 @@ internalFunctions = [
   DeclFun Ti32 (L.Ident "readInt") "readInt" [],
   DeclFun (Ptr Ti8) (L.Ident "readString") "readString" [],
   DeclFun (Ptr Ti8) stringsConcatIdent stringsConcat [(Ptr Ti8), (Ptr Ti8)],
-  DeclFun Ti1 stringsEqualIdent stringsEqual [(Ptr Ti8), (Ptr Ti8)]]
+  DeclFun Ti1 stringsEqualIdent stringsEqual [(Ptr Ti8), (Ptr Ti8)],
+  DeclFun (Ptr Ti8) mallocIdent malloc [Ti32]]
