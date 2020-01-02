@@ -17,6 +17,8 @@ accessedRegisters i = case i of
   IStore _ x r -> S.fromList (r:mapMaybe toRegister [x])
   IIcmp _ _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   IPhi _ args _ -> S.fromList $ mapMaybe (toRegister . fst) args
+  IBitcast _ x _ _ -> S.fromList $ mapMaybe toRegister [x]
+  IGetElementPtr _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   otherwise -> S.empty
   where
     toRegister :: Value -> Maybe Register
@@ -48,6 +50,8 @@ removeUnusedAssignments bs =
       IAlloca _ r -> r `S.member` rs
       IIcmp _ _ _ _ r -> r `S.member` rs
       IPhi _ _ r -> r `S.member` rs
+      IBitcast _ _ _ r -> r `S.member` rs
+      IGetElementPtr _ _ _ r -> r `S.member` rs
       _ -> True
 
 -- Removes unused register assignments from functions in the given program.

@@ -48,4 +48,6 @@ fmapInstructionValue i f = case i of
   IStore t v r -> IStore t (f v) r
   IIcmp c t v w r -> IIcmp c t (f v) (f w) r
   IPhi t args r ->  IPhi t (flip map args $ \(v, l) -> (f v, l)) r
+  IBitcast t v tt r -> IBitcast t (f v) tt r
+  IGetElementPtr t v w r -> IGetElementPtr t (f v) (f w) r
   i -> i

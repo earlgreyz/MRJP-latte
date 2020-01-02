@@ -40,7 +40,7 @@ run p f s = let ts = myLLexer s in case p ts of
         exitFailure
       Right _ -> do
         hPutStr stderr "OK\n"
-        let p = runCompileProgram program
+        let p = runOptimizer $ runCompileProgram program
         putStr $ show p
 
 main :: IO ()
