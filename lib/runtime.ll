@@ -10,6 +10,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 @.str.1 = private unnamed_addr constant [4 x i8] c"%d \00", align 1
 @__stdinp = external global %struct.__sFILE*, align 8
+@.str.2 = private unnamed_addr constant [15 x i8] c"runtime error\0A\00", align 1
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
 define void @printInt(i32) #0 {
@@ -120,18 +121,18 @@ define i8* @stringsConcat(i8*, i8*) #0 {
   %17 = add nsw i32 %16, 1
   %18 = sext i32 %17 to i64
   %19 = mul i64 1, %18
-  %20 = call i8* @malloc(i64 %19) #5
+  %20 = call i8* @malloc(i64 %19) #6
   store i8* %20, i8** %7, align 8
   %21 = load i8*, i8** %7, align 8
   %22 = load i8*, i8** %3, align 8
   %23 = load i8*, i8** %7, align 8
   %24 = call i64 @llvm.objectsize.i64.p0i8(i8* %23, i1 false, i1 true, i1 false)
-  %25 = call i8* @__strcpy_chk(i8* %21, i8* %22, i64 %24) #6
+  %25 = call i8* @__strcpy_chk(i8* %21, i8* %22, i64 %24) #7
   %26 = load i8*, i8** %7, align 8
   %27 = load i8*, i8** %4, align 8
   %28 = load i8*, i8** %7, align 8
   %29 = call i64 @llvm.objectsize.i64.p0i8(i8* %28, i1 false, i1 true, i1 false)
-  %30 = call i8* @__strcat_chk(i8* %26, i8* %27, i64 %29) #6
+  %30 = call i8* @__strcat_chk(i8* %26, i8* %27, i64 %29) #7
   %31 = load i8*, i8** %7, align 8
   ret i8* %31
 }
@@ -150,13 +151,25 @@ declare i64 @llvm.objectsize.i64.p0i8(i8*, i1 immarg, i1 immarg, i1 immarg) #4
 ; Function Attrs: nounwind
 declare i8* @__strcat_chk(i8*, i8*, i64) #3
 
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define void @error() #0 {
+  %1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.2, i64 0, i64 0))
+  call void @exit(i32 1) #8
+  unreachable
+}
+
+; Function Attrs: noreturn
+declare void @exit(i32) #5
+
 attributes #0 = { noinline nounwind optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { allocsize(0) "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #3 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #4 = { nounwind readnone speculatable }
-attributes #5 = { allocsize(0) }
-attributes #6 = { nounwind }
+attributes #5 = { noreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #6 = { allocsize(0) }
+attributes #7 = { nounwind }
+attributes #8 = { noreturn }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

@@ -11,28 +11,8 @@ import Latte.ErrLatte
 
 import Analyzer.Analyzer
 import Analyzer.Error
+import Analyzer.Internal
 import Analyzer.TopDefinition
-
--- Create a function header.
-function :: Type () -> String -> [Type ()] -> (Ident, AnalyzerType)
-function r f args = (Ident f, (True, Fun Nothing (fmap make r) $ map (fmap make) args)) where
-  make :: () -> ErrPos
-  make () = Nothing
-
--- Build in functions.
-functions :: M.Map Ident AnalyzerType
-functions = M.fromList [
-  function (Void ()) "printInt" [Int ()],
-  function (Void ()) "printString" [Str ()],
-  function (Void ()) "error" [],
-  function (Int ()) "readInt" [],
-  function (Str ()) "readString" []]
-
-mainIdent :: Ident
-mainIdent = Ident "main"
-
-mainType :: Type ErrPos
-mainType = let (_, (_, t)) = function (Int ()) "main" [] in t
 
 -- Runs analyzer with starting environment.
 runAnalyzer :: (Program ErrPos) -> ExceptT String IO ()

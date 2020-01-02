@@ -39,3 +39,8 @@ const char *stringsConcat(const char *s, const char *t) {
   strcat(buffer, t);
   return buffer;
 }
+
+void error() {
+  printf("runtime error\n");
+  exit(EXIT_FAILURE);
+}
