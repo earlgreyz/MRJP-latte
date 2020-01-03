@@ -1,3 +1,5 @@
 .stack-work/
 MRJP-latte.cabal
 *~
+compiler
+latc_llvm

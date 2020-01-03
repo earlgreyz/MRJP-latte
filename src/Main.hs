@@ -1,8 +1,9 @@
 module Main where
 
-import System.IO ( stdin, stderr, hGetContents, openFile, hPutStr)
+import System.IO ( stdin, stderr, openFile, IOMode(..), hGetContents, hClose, hPutStr )
 import System.Environment ( getArgs, getProgName )
 import System.Exit ( exitFailure, exitSuccess )
+import System.FilePath.Posix
 import Control.Monad ( when )
 import Control.Monad.Except
 
@@ -32,16 +33,23 @@ run p f s = let ts = myLLexer s in case p ts of
     hPutStr stderr err
     exitFailure
   Ok program -> do
-    result <- runExceptT $ runAnalyzer program
-    case result of
-      Left err -> do
-        hPutStr stderr "ERROR\nStatic analysis failed\n"
-        hPutStr stderr err
-        exitFailure
-      Right _ -> do
-        hPutStr stderr "OK\n"
-        let p = runOptimizer $ runCompileProgram program
-        putStr $ show p
+    runStaticAnalysis program
+    let compiled = runOptimizer $ runCompileProgram program
+    let out = (dropExtension f) ++ ".ll"
+    handle <- openFile out WriteMode
+    hPutStr handle $ show compiled
+    hClose handle
+
+runStaticAnalysis :: Program ErrPos -> IO ()
+runStaticAnalysis program = do
+  result <- runExceptT $ runAnalyzer program
+  case result of
+    Left err -> do
+      hPutStr stderr "ERROR\nStatic analysis failed\n"
+      hPutStr stderr err
+      exitFailure
+    Right _ -> do
+      hPutStr stderr "OK\n"
 
 main :: IO ()
 main = do

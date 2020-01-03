@@ -16,9 +16,10 @@ dependencies:
 - array
 - mtl
 - containers
+- filepath
 
 executables:
-  latc_x86:
+  latc_llvm:
     main: Main.hs
     source-dirs: src
     ghc-options:

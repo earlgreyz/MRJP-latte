@@ -4,5 +4,6 @@ all: llvm
 llvm:
 	clang -O0 -o runtime.ll -emit-llvm -S runtime.c
 
+.PHONY: clean
 clean:
-	rm runtime.ll runtime.bc
+	rm -f runtime.ll runtime.bc
