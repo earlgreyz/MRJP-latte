@@ -3,3 +3,5 @@ MRJP-latte.cabal
 *~
 compiler
 latc_llvm
+lib/runtime.ll
+lib/runtime.bc
