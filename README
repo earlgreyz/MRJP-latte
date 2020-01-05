@@ -1,0 +1,74 @@
+# Mikołaj Walczak, 371852
+## Budowanie projektu
+Projekt zawiera Makefile, ktory pozwala na zbudowanie projektu przy pomocy
+polecenia `make` w katalogu glownym projektu.
+### Kompilator
+Kompilator napisany jest w Haskellu, a do zarzadzania zależnościami użyty został
+_stack_. Polecenie `make compiler` wykonuje `stack build` i kopiuje plik binarny
+do katalogu głownego projektu.
+### Bibiloteka runtime
+Biblioteka standardowa __runtime__ napisana jest w C i kompilowana do tekstowej
+reprezentacji LLVM oraz bitcode LLVM poleceniem `make runtime`, ktore wykonuje
+polecenia zawarte w Makefile katalogu lib.
+### Skrypt pomocniczy
+Dla przejrzystości programu głowny kompilator tlumaczy kod na forme tekstowa LLVM,
+a nastepnie skrypt pomocniczy `scripts/wrapper.sh` napisany w bashu linkuje skompilowany
+program z biblioteka runtime oraz tworzy plik wykonywalny `a.out`. Polecenie
+`make wrapper` kopiuje skrypt na odpowiednie miejsce w katalogu glownym projektu.
+
+## Biblioteki Haskella
+base, array, containers, filepath, mtl
+
+## Struktura plikow
+```
+lib/
+  Makefile
+  runtime.c           -- źrodła biblioteki runtime
+src/
+  Main.hs             - punkt startowy programu
+  Analyzer/           # Statyczna analiza programu
+    Analyzer.hs       - definicje typow uzywanych do statycznej analizy
+    Assert.hs         - funkcje pomocnicze do sprawdzania poprawnosci
+    Error.hs          - definicje komunikatow o bledach
+    Expression.hs     - statyczna analizy wyrazen arytmetycznych
+    Internal.hs       - definicje funkcji wbudowanych Latte
+    Main.hs           - funkcje do uruchamiania statycznej analizy
+    Statement.hs      - statyczna analiza instrukcji
+    TopDefinition.hs  - statyczna analiza definicji funkcji
+    Util.hs           - drobne funkcje pomocnicze
+  Constexpr/          # Upraszczanie wyrażeń arytmetycznych na stałych
+    Evaluate.hs       - obliczanie wyrażeń
+    Util.hs           - funkcje pomocnicze
+    Value.hs          - definicje typow dla wartosci obliczen
+  Latte/              # Parser dla jezyka latte do AST
+    Latte.cf          - definicja jezyka w formacie BNFC
+    ErrLatte.hs       - definicja typu pozycji wraz z funkcjami pomocniczymi
+    ..
+  Llvm/               # Głowny kompilator
+    Compiler.hs       - definicje typow dla kompilatora i funkcji pomocniczych
+    Expression.hs     - kompilacja wyrazen arytmetycznych
+    Internal.hs       - definicje funkcji wbudowanych Latte
+    Llvm.hs           - definicje skladni abstrakcyjnej Latte
+    Main.hs           - uruchamianie kompilatora
+    Statement.hs      - kompilacja instrukcji
+    TopDefinition.hs  - kompilacja funkcji
+    Util.hs           - funkcje pomocnicze dla kompilatora
+    Optimizer/              ## Optymalizacje
+      Main.hs               - uruchamianie optymalizacji na skompilowanym programie
+      TrivialPhis.hs        - usuwanie trywialnych phi
+      UnreachableBlocks.hs  - usuwanie nieosiagalnych blokow
+      UnusedArguments.hs    - usuwanie nieuzywanych przypisan
+  Util/               # Funkcje pomocnicze niezalezne od podkatalogu
+    Function.hs       - funkcje pomocnicze do operowania na funkcjach
+    String.hs         - funkcje pomocnicze do operowania na ciagach znakow
+```
+
+## Optymalizacje
+- propagacja stałych _(src/Constexpr)_
+- usuwanie nieosiagalnych blokow
+- upraszczenie if/while
+- usuwanie nieuzywanych przypisan
+- usuwanie trywialnych phi (z jedna mozliwoscia)
+
+## Rozszerzenia
+- tablice
