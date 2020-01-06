@@ -4,13 +4,23 @@ entrypoints Program ;
 
 Program.   Program ::= [TopDef] ;
 
-FnDef.	   TopDef ::= Type Ident "(" [Arg] ")" Block ;
+FnDef.	   TopDef ::= FunDef ;
+
+ClDef.     TopDef ::= "class" Ident "{" [Field] "}" ;
 
 separator nonempty TopDef "" ;
 
-Arg. 	   Arg ::= Type Ident;
+Arg.       Arg ::= Type Ident;
 
 separator  Arg "," ;
+
+Attr.      Field ::= Type Ident ";";
+
+Method.    Field ::= FunDef;
+
+separator  nonempty Field "";
+
+FunDef.     FunDef  ::= Type Ident "(" [Arg] ")" Block ;
 
 -- statements ----------------------------------------------
 
@@ -56,6 +66,8 @@ LVar.      LValue ::= Ident ;
 
 LAt.       LValue ::= Expr6 "[" Expr "]" ;
 
+LAttr.     LValue ::= Expr6 "." Ident ;
+
 -- Types ---------------------------------------------------
 
 Int.       Type ::= "int" ;
@@ -68,25 +80,35 @@ Void.      Type ::= "void" ;
 
 Array.     Type ::= Type "[]";
 
+Class.     Type ::= Ident ;
+
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 
 separator  Type "," ;
 
 -- Expressions ---------------------------------------------
 
-ELitInt.   Expr7 ::= Integer ;
-
-ELitTrue.  Expr7 ::= "true" ;
-
-ELitFalse. Expr7 ::= "false" ;
-
-EString.   Expr7 ::= String ;
-
 EVar.      Expr6 ::= LValue ;
+
+ELitInt.   Expr6 ::= Integer ;
+
+ELitTrue.  Expr6 ::= "true" ;
+
+ELitFalse. Expr6 ::= "false" ;
+
+EString.   Expr6 ::= String ;
 
 EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 
-ELength.   Expr5 ::= Expr6 "." "length" ;
+ENewArr.   Expr6 ::= "new" Type "[" Expr "]" ;
+
+ENewObj.   Expr6 ::= "new" Ident ;
+
+EAttrFun.  Expr6 ::= Expr6 "." Ident "(" [Expr] ")" ;
+
+ENullCast. Expr6 ::= "(" Ident ")" "null" ;
+
+ECast.     Expr5 ::= "(" Ident ")" Expr5 ;
 
 Neg.       Expr5 ::= "-" Expr6 ;
 
@@ -102,9 +124,7 @@ EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
 
 EOr.       Expr ::= Expr1 "||" Expr ;
 
-ENew.      Expr ::= "new" Type "[" Expr "]" ;
-
-coercions  Expr 7 ;
+coercions  Expr 6 ;
 
 separator  Expr "," ;
 
@@ -139,4 +159,3 @@ comment    "#" ;
 comment    "//" ;
 
 comment    "/*" "*/" ;
-

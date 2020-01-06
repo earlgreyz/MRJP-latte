@@ -17,10 +17,18 @@ transProgram x = case x of
   Program _ topdefs -> failure x
 transTopDef :: Show a => TopDef a -> Result
 transTopDef x = case x of
-  FnDef _ type_ ident args block -> failure x
+  FnDef _ fundef -> failure x
+  ClDef _ ident fields -> failure x
 transArg :: Show a => Arg a -> Result
 transArg x = case x of
   Arg _ type_ ident -> failure x
+transField :: Show a => Field a -> Result
+transField x = case x of
+  Attr _ type_ ident -> failure x
+  Method _ fundef -> failure x
+transFunDef :: Show a => FunDef a -> Result
+transFunDef x = case x of
+  FunDef _ type_ ident args block -> failure x
 transBlock :: Show a => Block a -> Result
 transBlock x = case x of
   Block _ stmts -> failure x
@@ -47,6 +55,7 @@ transLValue :: Show a => LValue a -> Result
 transLValue x = case x of
   LVar _ ident -> failure x
   LAt _ expr1 expr2 -> failure x
+  LAttr _ expr ident -> failure x
 transType :: Show a => Type a -> Result
 transType x = case x of
   Int _ -> failure x
@@ -54,16 +63,21 @@ transType x = case x of
   Bool _ -> failure x
   Void _ -> failure x
   Array _ type_ -> failure x
+  Class _ ident -> failure x
   Fun _ type_ types -> failure x
 transExpr :: Show a => Expr a -> Result
 transExpr x = case x of
+  EVar _ lvalue -> failure x
   ELitInt _ integer -> failure x
   ELitTrue _ -> failure x
   ELitFalse _ -> failure x
   EString _ string -> failure x
-  EVar _ lvalue -> failure x
   EApp _ ident exprs -> failure x
-  ELength _ expr -> failure x
+  ENewArr _ type_ expr -> failure x
+  ENewObj _ ident -> failure x
+  EAttrFun _ expr ident exprs -> failure x
+  ENullCast _ ident -> failure x
+  ECast _ ident expr -> failure x
   Neg _ expr -> failure x
   Not _ expr -> failure x
   EMul _ expr1 mulop expr2 -> failure x
@@ -71,7 +85,6 @@ transExpr x = case x of
   ERel _ expr1 relop expr2 -> failure x
   EAnd _ expr1 expr2 -> failure x
   EOr _ expr1 expr2 -> failure x
-  ENew _ type_ expr -> failure x
 transAddOp :: Show a => AddOp a -> Result
 transAddOp x = case x of
   Plus _ -> failure x
