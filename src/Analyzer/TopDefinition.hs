@@ -5,11 +5,13 @@ import qualified Data.Map as M
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.Foldable
 
 import Latte.AbsLatte
 import Latte.ErrLatte
 
 import Analyzer.Analyzer
+import Analyzer.Assert
 import Analyzer.Error
 import Analyzer.Statement
 
@@ -19,30 +21,54 @@ argTypes args = map transform args where
   transform (Arg _ t _) = t
 
 -- Insert arguments into the environment.
-insertArgs :: [Arg ErrPos] -> Analyzer Env
-insertArgs [] = ask
+insertArgs :: [Arg ErrPos] -> Analyzer Vars
+insertArgs [] = askVars
 insertArgs ((Arg a t arg):args) = do
-  env <- ask
-  when (t == Void Nothing) $ throwError $ voidArgumentError a arg
-  case M.lookup arg env of
+  vs <- askVars
+  assertDeclarableType a t arg
+  case M.lookup arg vs of
     Just (True, tt) -> throwError $ redeclaredError a arg (getTypeErrPos tt)
-    _ -> local (\_ -> M.insert arg (True, t) env) $ insertArgs args
+    otherwise -> localVars (const $ M.insert arg (True, t) vs) $ insertArgs args
 
--- Iterate through a list of top definitions and insert them into the environment.
-defineManyTopDef :: [TopDef ErrPos] -> Analyzer Env
-defineManyTopDef [] = ask
-defineManyTopDef ((FnDef a r f args _):ds) = do
-  env <- ask
-  case M.lookup f env of
+-- Define class attribute.
+defineField :: Fields -> (Field ErrPos) -> Analyzer Fields
+defineField fs (Attr a t x) = case M.lookup x fs of
+  Just tt -> throwError $ redeclaredError a x (getTypeErrPos tt)
+  Nothing -> return $ M.insert x t fs
+defineField fs (Method a f) = error "unimplemented yet" -- TODO: implement
+
+-- Collect definition and return environment with added top definitons.
+defineTopDef :: TopDef ErrPos -> Analyzer Env
+defineTopDef (FnDef _ (FunDef a r f args _)) = do
+  (vs, cs) <- ask
+  case M.lookup f vs of
     Just (_, tt) -> throwError $ redeclaredError a f (getTypeErrPos tt)
     Nothing -> return ()
   let ft = Fun a r (argTypes args)
-  local (\env -> M.insert f (True, ft) env) $ defineManyTopDef ds
+  return (M.insert f (True, ft) vs, cs)
+defineTopDef (ClDef a cls attrs) = do
+  (vs, cs) <- ask
+  case M.lookup cls cs of
+    Just _ -> throwError $ classRedeclaredError a cls
+    Nothing -> return ()
+  fs <- foldM defineField M.empty attrs
+  return (vs, M.insert cls fs cs)
 
+-- Iterate through a list of top definitions and insert them into the environment.
+defineManyTopDef :: [TopDef ErrPos] -> Analyzer Env
+defineManyTopDef ts =
+  ask >>= \start -> foldlM (\env t -> local (const env) $ defineTopDef t) start ts
+
+-- Runs static analysis on a top definition.
 analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
-analyzeTopDef (FnDef a t f args block) = do
+analyzeTopDef (FnDef _ (FunDef a t f args block)) = do
   modify $ \_ -> False
-  env <- local (\env -> startBlock env) $ insertArgs args
-  local (\_ -> insertRet t env) $ analyzeBlock block
+  vs <- localVars (\vs -> startBlock vs) $ insertArgs args
+  localVars (const $ insertRet t vs) $ analyzeBlock block
   ret <- get
   unless (t == Void Nothing || ret) $ throwError $ missingReturnError a f
+analyzeTopDef (ClDef a cls fields) = mapM_ analyzeField fields
+
+analyzeField :: (Field ErrPos) -> Analyzer ()
+analyzeField (Attr a t x) = assertDeclarableType a t x
+analyzeField (Method a f) = error "unimplemented yet" -- TODO: implement

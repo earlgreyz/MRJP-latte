@@ -28,3 +28,6 @@ mainIdent = Ident "main"
 
 mainType :: Type ErrPos
 mainType = let (_, (_, t)) = function (Int ()) "main" [] in t
+
+lengthIdent :: Ident
+lengthIdent = Ident "length"

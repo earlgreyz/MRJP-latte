@@ -14,15 +14,39 @@ redeclaredError a x b = intercalate " " [
   (showErrPos a), (show x), "already declared in this block,",
   "previous declaration", (showErrPos b)]
 
+classRedeclaredError :: ErrPos -> Ident -> String
+classRedeclaredError a x = intercalate " " [
+  (showErrPos a), (show x), "previously declared as a class"]
+
 typeMismatchError :: Print a => Type ErrPos -> a -> Type ErrPos -> String
 typeMismatchError tt x t = intercalate " " [
   (showErrPos $ getTypeErrPos tt),
   "cannot assign expression of type", (show tt),
   "to", printTree x, "of type", (show t)]
 
+invalidClassError :: ErrPos -> Ident -> String
+invalidClassError a x = intercalate " " [
+  (showErrPos a), "unknown class", (showIdent x)]
+
+invalidObjectClassError :: ErrPos -> Type ErrPos -> String
+invalidObjectClassError a t = intercalate " " [
+  (showErrPos a), "cannot instantiate object of type", (show t)]
+
 undefinedError :: ErrPos -> Ident -> String
 undefinedError a x = intercalate " " [
   (showErrPos a), (showIdent x), "was not defined in this scope"]
+
+undefinedClassError :: ErrPos -> Ident -> String
+undefinedClassError a x = intercalate " " [
+  (showErrPos a), "class", (showIdent x), "was not defined in this scope"]
+
+undefinedAttributeError :: ErrPos -> Ident -> Ident -> String
+undefinedAttributeError a cls f = intercalate " " [
+  (showErrPos a), "object of type", (showIdent cls), "has no attribute named", (showIdent f)]
+
+attributeObjectError :: ErrPos -> Type ErrPos -> Ident -> String
+attributeObjectError a t f = intercalate " " [
+  (showErrPos a), "cannot get attribute",  (showIdent f), "of object of type", (show t)]
 
 arrayError :: Print a => ErrPos -> a -> Type ErrPos -> String
 arrayError a x t = intercalate " " [
@@ -65,9 +89,9 @@ missingQuotesError :: ErrPos -> String
 missingQuotesError a = intercalate " " [
   (showErrPos a), "string constant missing quotes"]
 
-voidArgumentError :: ErrPos -> Ident -> String
-voidArgumentError a x = intercalate " " [
-  (showErrPos a), "argument", (showIdent x), "has invalid type void"]
+invalidDeclarationError :: ErrPos -> Ident -> Type ErrPos -> String
+invalidDeclarationError a x t = intercalate " " [
+  (showErrPos a), "declaration", (showIdent x), "has invalid type", (show t)]
 
 voidDeclarationError :: ErrPos -> String
 voidDeclarationError a = (showErrPos a) ++ " void type cannot be used as a variable"

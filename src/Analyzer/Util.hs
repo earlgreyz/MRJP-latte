@@ -12,6 +12,11 @@ import Analyzer.Analyzer
 import Analyzer.Error
 
 mustLookup :: ErrPos -> Ident -> Analyzer (Type ErrPos)
-mustLookup a x = ask >>= \env -> case M.lookup x env of
+mustLookup a x = askVars >>= \vs -> case M.lookup x vs of
   Nothing -> throwError $ undefinedError a x
   Just (_, t) -> return t
+
+mustLookupClass :: ErrPos -> Ident -> Analyzer Fields
+mustLookupClass a cls = askClasses >>= \cs -> case M.lookup cls cs of
+  Nothing -> throwError $ undefinedClassError a cls
+  Just fs -> return fs

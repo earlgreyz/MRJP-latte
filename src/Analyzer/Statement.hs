@@ -21,45 +21,47 @@ import Constexpr.Evaluate
 import Constexpr.Value
 
 -- Change _declared in current block_ to false.
-startBlock :: Env -> Env
-startBlock env = M.map (\(_, t) -> (False, t)) env
+startBlock :: Vars -> Vars
+startBlock vs = M.map (\(_, t) -> (False, t)) vs
 
 analyzeBlock :: (Block ErrPos) -> Analyzer ()
 analyzeBlock (Block _ ss) =
-  local (\env -> startBlock env) $ analyzeManyStmt ss
+  localVars (\vs -> startBlock vs) $ analyzeManyStmt ss
 
 analyzeManyStmt :: [Stmt ErrPos] -> Analyzer ()
 analyzeManyStmt ss = do
-  env <- ask
-  foldlM (\env s -> local (const env) $ analyzeStmt s) env ss
+  startVars <- askVars
+  foldlM (\vs s -> localVars (const vs) $ analyzeStmt s) startVars ss
   return ()
 
-declare :: Type ErrPos -> Item ErrPos -> Analyzer Env
+declare :: Type ErrPos -> Item ErrPos -> Analyzer Vars
 declare t (NoInit a x) = do
-  env <- ask
+  vs <- askVars
   assertNotRedeclared a x
-  return $ M.insert x (True, t) env
+  assertNotClass a x
+  return $ M.insert x (True, t) vs
 declare t (Init a x e) = do
-  env <- ask
+  vs <- askVars
   assertNotRedeclared a x
+  assertNotClass a x
   tt <- analyzeExpr e
   unless (t == tt) $ throwError $ typeMismatchError tt x t
-  return $ M.insert x (True, t) env
+  return $ M.insert x (True, t) vs
 
 -- Special marker for the return environment.
 returnIdent :: Ident
 returnIdent = Ident "return"
 
 -- Insert function return type into the environment.
-insertRet :: (Type ErrPos) -> Env -> Env
+insertRet :: (Type ErrPos) -> Vars -> Vars
 insertRet t env = M.insert returnIdent (True, t) env
 
-analyzeReturn :: ErrPos -> Type ErrPos -> Analyzer Env
+analyzeReturn :: ErrPos -> Type ErrPos -> Analyzer Vars
 analyzeReturn a tt = do
   t <- mustLookup a returnIdent
   unless (t == tt) $ throwError $ typeExpectedError a t tt
   modify $ \_ -> True
-  ask
+  askVars
 
 analyzeCond :: Stmt ErrPos -> Analyzer Bool
 analyzeCond s = do
@@ -68,23 +70,23 @@ analyzeCond s = do
   sret <- get
   return sret
 
-analyzeStmt :: Stmt ErrPos -> Analyzer Env
-analyzeStmt (Empty _) = ask
-analyzeStmt (BStmt _ b) = analyzeBlock b >> ask
-analyzeStmt (Decl _ t []) = ask
+analyzeStmt :: Stmt ErrPos -> Analyzer Vars
+analyzeStmt (Empty _) = askVars
+analyzeStmt (BStmt _ b) = analyzeBlock b >> askVars
+analyzeStmt (Decl _ t []) = askVars
 analyzeStmt (Decl a t (x:xs)) = do
   when (t == Void Nothing) $ throwError $ voidDeclarationError a
-  env <- declare t x
-  local (\_ -> env) $ analyzeStmt (Decl Nothing t xs)
+  vs <- declare t x
+  localVars (const vs) $ analyzeStmt (Decl Nothing t xs)
 analyzeStmt (Ass a x e) = do
   t <- analyzeLValue x
   tt <- analyzeExpr e
   unless (t == tt) $ throwError $ typeMismatchError tt x t
-  ask
+  askVars
 analyzeStmt (Incr a x) = do
   t <- analyzeLValue x
   unless (t == (Int Nothing)) $ throwError $ intExpectedError a x t
-  ask
+  askVars
 analyzeStmt (Decr a x) = analyzeStmt $ Incr a x
 analyzeStmt (Ret a e) = do
   tt <- analyzeExpr e
@@ -104,7 +106,7 @@ analyzeStmt (CondElse _ e st sf) = do
       tret <- analyzeCond st
       fret <- analyzeCond sf
       modify $ \_ -> ret || (tret && fret)
-  ask
+  askVars
 analyzeStmt (Cond a e s) = analyzeStmt (CondElse a e s (Empty Nothing))
 analyzeStmt (While a e s) = analyzeStmt (Cond a e s)
 analyzeStmt (ForEach a t x array s) = do
@@ -112,6 +114,6 @@ analyzeStmt (ForEach a t x array s) = do
   case at of
     Array _ tt -> assertType a tt t
     otherwise -> throwError $ arrayError a array at
-  local (\env -> M.insert x (True, t) env) $ analyzeStmt s
-  ask
-analyzeStmt (SExp a e) = analyzeExpr e >> ask
+  localVars (\vs -> M.insert x (True, t) vs) $ analyzeStmt s
+  askVars
+analyzeStmt (SExp a e) = analyzeExpr e >> askVars

@@ -16,12 +16,12 @@ import Analyzer.TopDefinition
 
 -- Runs analyzer with starting environment.
 runAnalyzer :: (Program ErrPos) -> ExceptT String IO ()
-runAnalyzer p = flip evalStateT False $ flip runReaderT functions $ analyze p
+runAnalyzer p = flip evalStateT False $ flip runReaderT (functions, M.empty) $ analyze p
 
 analyze :: (Program ErrPos) -> Analyzer ()
 analyze (Program _ ts) = do
-  env <- defineManyTopDef ts
-  case M.lookup mainIdent env of
+  (vs, cs) <- defineManyTopDef ts
+  case M.lookup mainIdent vs of
     Nothing -> throwError $ missingMainError
     Just (_, t) -> unless (t == mainType) $ throwError $ invalidMainTypeError t
-  local (\_ -> env) $ mapM_ analyzeTopDef ts
+  local (const (vs, cs)) $ mapM_ analyzeTopDef ts

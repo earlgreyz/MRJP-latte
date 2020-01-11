@@ -10,6 +10,7 @@ import Latte.ErrLatte
 import Analyzer.Analyzer
 import Analyzer.Assert
 import Analyzer.Error
+import Analyzer.Internal
 import Analyzer.Util
 
 analyzeUnaryExpr :: Expr ErrPos -> Type ErrPos -> Analyzer (Type ErrPos)
@@ -35,6 +36,18 @@ analyzeLValue (LAt a x i) = do
   case xt of
     Array _ t -> return t
     otherwise -> throwError $ arrayError a x xt
+analyzeLValue (LAttr a x f) = analyzeExpr x >>= \xt -> case xt of
+  Class _ cls -> do
+    fs <- mustLookupClass a cls
+    case M.lookup f fs of
+      Just t -> return t
+      Nothing -> throwError $ undefinedAttributeError a cls f
+  Array _ t -> do
+    if f == lengthIdent then
+      return $ Int a
+    else
+      throwError $ attributeObjectError a xt f
+  otherwise -> throwError $ attributeObjectError a xt f
 
 analyzeExpr :: (Expr ErrPos) -> Analyzer (Type ErrPos)
 analyzeExpr (EVar _ x) = analyzeLValue x
@@ -51,9 +64,6 @@ analyzeExpr (EApp a f args) = do
       unless (ts == tts) $ throwError $ argumentsError a f ts tts
       return r
     tt -> throwError $ functionError a f tt
-analyzeExpr (ELength a e) = analyzeExpr e >>= \t -> case t of
-  Array _ _ -> return $ Int a
-  otherwise -> throwError $ arrayError a e t
 analyzeExpr (EString a s) = do
   if (length s < 2) || (head s /= '\"') || (last s /= '\"') then
     throwError $ missingQuotesError a
@@ -76,12 +86,19 @@ analyzeExpr (ERel a e op f) = case op of
     tf <- analyzeExpr f
     assertType (getExprErrPos f) te tf
     return $ Bool a
+  NE _ -> analyzeExpr (ERel a e (EQU a) f)
   _ -> do
     analyzeBinaryExpr e f (Int Nothing)
     return $ Bool a
 analyzeExpr (EAnd a e f) = analyzeBinaryExpr e f (Bool a)
 analyzeExpr (EOr a e f) = analyzeBinaryExpr e f (Bool a)
-analyzeExpr (ENew a t e) = do
+analyzeExpr (ENewArr a t e) = do
   te <- analyzeExpr e
   assertType a (Int Nothing) te
   return $ Array a t
+analyzeExpr (ENewObj a cls) = do
+  mustLookupClass a cls
+  return $ Class a cls
+analyzeExpr (ENullCast a cls) = do
+  mustLookupClass a cls
+  return $ Class a cls
