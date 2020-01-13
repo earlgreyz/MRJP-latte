@@ -12,13 +12,13 @@ import Llvm.Statement
 import Llvm.Util
 
 collectDeclaration :: L.TopDef a -> Compiler Declaration
-collectDeclaration (L.FnDef _ t fname args _) = do
+collectDeclaration (L.FnDef _ (L.FunDef _ t fname args _)) = do
   let rt = convertType t
   let ts = map (\(L.Arg _ t _) -> convertType t) args
   return $ DeclFun rt fname (convertFunctionName fname) ts
 
 compileTopDef :: L.TopDef a -> Compiler ()
-compileTopDef f@(L.FnDef _ t _ args block) = do
+compileTopDef f@(L.FnDef _ (L.FunDef _ t _ args block)) = do
   (DeclFun rt _ fname ts) <- collectDeclaration f
   -- Collect argument names.
   let xs = map (\(L.Arg _ _ x) -> x) args
@@ -47,6 +47,5 @@ compileTopDef f@(L.FnDef _ t _ args block) = do
       Tvoid -> emitInstruction $ IRet Tvoid (VInt 0)
       Ti1 -> emitInstruction $ IRet Ti1 (VBool False)
       Ti32 -> emitInstruction $ IRet Ti32 (VInt 0)
-      Ptr Ti8 -> newConstant "" >>= \c -> emitInstruction $ IRet (Ptr Ti8) (VConst c)
-      Array t -> newConstant "\0\0\0\0" >>= \c -> emitInstruction $ IRet (Array t) (VConst c)
-      _ -> error "unknown type"
+      Ptr Ti8 -> emitInstruction $ IRet (Ptr Ti8) (VInt 0)
+      Array t -> emitInstruction $ IRet (Array t) (VInt 0)

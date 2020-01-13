@@ -52,6 +52,25 @@ getValuePointer (L.LAt _ x e) = do
   reg <- freshRegister
   emitInstruction $ IBitcast (Ptr Ti8) (VReg element) (Ptr t) reg
   return (t, reg)
+getValuePointer (L.LAttr _ x a) = do
+  (xt, ptr) <- compileExpr x
+  case xt of
+    Array t -> do
+      reg <- freshRegister
+      emitInstruction $ IBitcast (Ptr Ti8) ptr (Ptr Ti32) reg
+      return (Ti32, reg)
+    Object cls -> do
+      cs <- askClasses
+      -- Offset in the struct.
+      let (_, fields) = cs M.! cls
+      let (t, offset) = fields M.! a
+      -- Pointer to the attribute.
+      attribute <- freshRegister
+      emitInstruction $ IGetElementPtr Ti8 ptr (VInt offset) attribute
+      -- Cast attribute pointer to the actual type.
+      reg <- freshRegister
+      emitInstruction $ IBitcast (Ptr Ti8) (VReg attribute) (Ptr t) reg
+      return (t, reg)
 
 -- Actual expression compilation. Should not be called directly.
 doCompileExpr :: (L.Expr a) -> Compiler (Type, Value)
@@ -176,7 +195,7 @@ doCompileExpr (L.EOr _ e f) = do
   reg <- freshRegister
   emitInstruction $ IPhi Ti1 [(VBool True, evlabel), (w, ewlabel)] reg
   return (Ti1, VReg reg)
-doCompileExpr (L.ENew _ t e) = do
+doCompileExpr (L.ENewArr _ t e) = do
   (_, len) <- compileExpr e
   let innerType = convertType t
   -- Allocate array as bytes to store the size in front of the data.
@@ -188,13 +207,9 @@ doCompileExpr (L.ENew _ t e) = do
   emitInstruction $ IBitcast (Ptr Ti8) (VReg array) (Ptr Ti32) sizeLocation
   emitInstruction $ IStore Ti32 len sizeLocation
   return (Array innerType, VReg array)
-doCompileExpr (L.ELength _ e) = do
-  (t, array) <- compileExpr e
-  let innerType = arrayType t
-  -- Convert array address to a size pointer.
-  sizeLocation <- freshRegister
-  emitInstruction $ IBitcast (Ptr Ti8) array (Ptr Ti32) sizeLocation
-  -- Load value from the size pointer.
-  reg <- freshRegister
-  emitInstruction $ ILoad Ti32 (VReg sizeLocation) reg
-  return (Ti32, VReg reg)
+doCompileExpr (L.ENewObj _ cls) = do
+  cs <- askClasses
+  let (size, _) = cs M.! cls
+  object <- freshRegister
+  emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, VInt size)] (Just object)
+  return (Object cls, VReg object)

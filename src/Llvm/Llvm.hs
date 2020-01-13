@@ -30,14 +30,15 @@ instance Show Constant where
     show (1 + length s), " x i8] c\"", escape s, "\\00\", align 1" ]
 
 -- LLVM types.
-data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type | Array Type deriving (Eq, Ord)
+data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type | Array Type | Object L.Ident deriving (Eq, Ord)
 instance Show Type where
   show Ti64 = "i64"
   show Ti32 = "i32"
   show Ti8 = "i8"
   show Ti1 = "i1"
   show Tvoid = "void"
-  show (Array t) = show (Ptr Ti8)
+  show (Array _) = show (Ptr Ti8)
+  show (Object _) = show (Ptr Ti8)
   show (Ptr t) = (show t) ++ "*"
 
 -- LLVM values.

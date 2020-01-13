@@ -26,7 +26,7 @@ runCompileProgram p =
     Program (internalFunctions, cs, fs)
   where
     execCompilerRWST m =
-      execRWST m (M.empty, fromDeclarations $ internalFunctions) (Register 0, Label 0)
+      execRWST m (M.empty, fromDeclarations $ internalFunctions, M.empty) (Register 0, Label 0)
     evalFunctionBuilder m =
       evalStateT m ((Tvoid, "", []), [])
     evalBlockBuilder m =

@@ -15,6 +15,7 @@ import qualified Constexpr.Value as C
 
 import Llvm.Compiler
 import Llvm.Expression
+import Llvm.Internal
 import Llvm.Llvm
 import Llvm.Util
 
@@ -35,15 +36,15 @@ compileDecl t (L.Init _ x e) = do
   reg <- freshRegister
   emitInstruction $ IAlloca tv reg
   emitInstruction $ IStore tv v reg
-  (vs, fs) <- ask
-  return (M.insert x (tv, reg) vs, fs)
+  (vs, fs, cs) <- ask
+  return (M.insert x (tv, reg) vs, fs, cs)
 compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
   defaultValue :: L.Type a -> L.Expr a
   defaultValue t = case t of
     L.Int a -> L.ELitInt a 0
     L.Bool a -> L.ELitFalse a
     L.Str a -> L.EString a "\"\""
-    L.Array a t -> L.ENew a t (L.ELitInt a 0)
+    L.Array a t -> L.ENewArr a t (L.ELitInt a 0)
 
 compileStmt :: forall a. L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask
@@ -140,13 +141,14 @@ compileStmt (L.ForEach a t x array s) = compileBlock block >> ask
     counterLValue = L.LVar a counterIdent
     counterExpr :: L.Expr a
     counterExpr = L.EVar a counterLValue
+    arrayLength :: L.Expr a
+    arrayLength = L.EVar a (L.LAttr a array lengthIdent)
     block :: L.Block a
     block = L.Block a [
       L.Decl a (L.Int a) [L.Init a counterIdent (L.ELitInt a 0)],
       L.Decl a t [L.NoInit a x],
-      L.While a (L.ERel a counterExpr (L.LTH a) (L.ELength a array)) (L.BStmt a $ L.Block a [
+      L.While a (L.ERel a counterExpr (L.LTH a) arrayLength) (L.BStmt a $ L.Block a [
         L.Ass a (L.LVar a x) (L.EVar a $ L.LAt a array counterExpr),
         s,
         L.Incr a counterLValue])]
-
 compileStmt (L.SExp _ e) = compileExpr e >> ask

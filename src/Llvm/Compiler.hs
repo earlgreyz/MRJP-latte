@@ -14,8 +14,10 @@ import Llvm.Util
 
 type Variables = M.Map L.Ident (Type, Register)
 type Functions = M.Map L.Ident (Type, String)
+type Fields = M.Map L.Ident (Type, Integer)
+type Classes = M.Map L.Ident (Integer, Fields)
 
-type Env = (Variables, Functions)
+type Env = (Variables, Functions, Classes)
 type CompilerState = (Register, Label)
 type FunctionHeader = (Type, String, [(Type, Register)])
 
@@ -126,14 +128,21 @@ freshLabel = do
 
 -- Returns variables map.
 askVariables :: Compiler Variables
-askVariables = ask >>= \(vs, _) -> return vs
+askVariables = ask >>= \(vs, _, _) -> return vs
 
 localVariables :: (Variables -> Variables) -> Compiler a -> Compiler a
-localVariables f compiler = local (\(vs, fs) -> (f vs, fs)) compiler
+localVariables f compiler = local (\(vs, fs, cs) -> (f vs, fs, cs)) compiler
 
 -- Returns functions map.
 askFunctions :: Compiler Functions
-askFunctions = ask >>= \(_, fs) -> return fs
+askFunctions = ask >>= \(_, fs, _) -> return fs
 
 localFunctions :: (Functions -> Functions) -> Compiler a -> Compiler a
-localFunctions f compiler = local (\(vs, fs) -> (vs, f fs)) compiler
+localFunctions f compiler = local (\(vs, fs, cs) -> (vs, f fs, cs)) compiler
+
+-- Returns classes map.
+askClasses :: Compiler Classes
+askClasses = ask >>= \(_, _, cs) -> return cs
+
+localClasses :: (Classes -> Classes) -> Compiler a -> Compiler a
+localClasses f compiler = local (\(vs, fs, cs) -> (vs, fs, f cs)) compiler

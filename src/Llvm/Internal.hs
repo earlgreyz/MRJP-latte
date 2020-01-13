@@ -19,6 +19,9 @@ malloc = "malloc"
 mallocIdent :: L.Ident
 mallocIdent = L.Ident malloc
 
+lengthIdent :: L.Ident
+lengthIdent = L.Ident "length"
+
 internalFunctions :: [Declaration]
 internalFunctions = [
   DeclFun Tvoid (L.Ident "printInt") "printInt" [Ti32],
