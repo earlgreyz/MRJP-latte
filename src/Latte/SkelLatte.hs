@@ -19,6 +19,7 @@ transTopDef :: Show a => TopDef a -> Result
 transTopDef x = case x of
   FnDef _ fundef -> failure x
   ClDef _ ident fields -> failure x
+  ClExtDef _ ident1 ident2 fields -> failure x
 transArg :: Show a => Arg a -> Result
 transArg x = case x of
   Arg _ type_ ident -> failure x

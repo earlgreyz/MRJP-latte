@@ -8,6 +8,8 @@ FnDef.	   TopDef ::= FunDef ;
 
 ClDef.     TopDef ::= "class" Ident "{" [Field] "}" ;
 
+ClExtDef.  TopDef ::= "class" Ident "extends" Ident "{" [Field] "}" ;
+
 separator nonempty TopDef "" ;
 
 Arg.       Arg ::= Type Ident;

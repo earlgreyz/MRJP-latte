@@ -9,13 +9,17 @@ data Program a = Program a [TopDef a]
 instance Functor Program where
     fmap f x = case x of
         Program a topdefs -> Program (f a) (map (fmap f) topdefs)
-data TopDef a = FnDef a (FunDef a) | ClDef a Ident [Field a]
+data TopDef a
+    = FnDef a (FunDef a)
+    | ClDef a Ident [Field a]
+    | ClExtDef a Ident Ident [Field a]
   deriving (Eq, Ord, Show, Read)
 
 instance Functor TopDef where
     fmap f x = case x of
         FnDef a fundef -> FnDef (f a) (fmap f fundef)
         ClDef a ident fields -> ClDef (f a) ident (map (fmap f) fields)
+        ClExtDef a ident1 ident2 fields -> ClExtDef (f a) ident1 ident2 (map (fmap f) fields)
 data Arg a = Arg a (Type a) Ident
   deriving (Eq, Ord, Show, Read)
 

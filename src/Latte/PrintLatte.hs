@@ -91,6 +91,7 @@ instance Print (TopDef a) where
   prt i e = case e of
     FnDef _ fundef -> prPrec i 0 (concatD [prt 0 fundef])
     ClDef _ id fields -> prPrec i 0 (concatD [doc (showString "class"), prt 0 id, doc (showString "{"), prt 0 fields, doc (showString "}")])
+    ClExtDef _ id1 id2 fields -> prPrec i 0 (concatD [doc (showString "class"), prt 0 id1, doc (showString "extends"), prt 0 id2, doc (showString "{"), prt 0 fields, doc (showString "}")])
   prtList _ [x] = (concatD [prt 0 x])
   prtList _ (x:xs) = (concatD [prt 0 x, prt 0 xs])
 instance Print (Arg a) where

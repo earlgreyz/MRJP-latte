@@ -14,6 +14,8 @@ getTypeErrPos (Int a) = a
 getTypeErrPos (Str a) = a
 getTypeErrPos (Bool a) = a
 getTypeErrPos (Void a) = a
+getTypeErrPos (Array a _) = a
+getTypeErrPos (Class a _) = a
 getTypeErrPos (Fun a _ _) = a
 
 getItemErrPos :: Item a -> a
@@ -26,6 +28,11 @@ getExprErrPos (ELitInt a _) = a
 getExprErrPos (ELitTrue a) = a
 getExprErrPos (ELitFalse a) = a
 getExprErrPos (EApp a _ _) = a
+getExprErrPos (ENewArr a _ _) = a
+getExprErrPos (ENewObj a _) = a
+getExprErrPos (EAttrFun a _ _ _) = a
+getExprErrPos (ENullCast a _) = a
+getExprErrPos (ECast a _ _) = a
 getExprErrPos (EString a _) = a
 getExprErrPos (Neg a _) = a
 getExprErrPos (Not a _) = a
