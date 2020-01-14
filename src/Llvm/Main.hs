@@ -1,6 +1,7 @@
 module Llvm.Main (runCompileProgram) where
 
 import qualified Data.Map as M
+import Data.Maybe
 
 import Control.Monad.Identity
 import Control.Monad.RWS.Lazy
@@ -15,10 +16,18 @@ import Llvm.Llvm
 import Llvm.TopDefinition
 
 fromDeclarations :: [Declaration] -> Functions
-fromDeclarations ds = M.fromList $ map convert ds
+fromDeclarations ds = M.fromList $ mapMaybe convert ds
   where
-    convert :: Declaration -> (L.Ident, (Type, String))
-    convert (DeclFun rt ident fname _) = (ident, (rt, fname))
+    convert :: Declaration -> Maybe (L.Ident, (Type, String))
+    convert (DeclFun rt ident fname _) = Just (ident, (rt, fname))
+    convert (DeclClass _ _ _) = Nothing
+
+classesFromDeclarations :: [Declaration] -> Classes
+classesFromDeclarations ds = M.fromList $ mapMaybe convert ds
+  where
+    convert :: Declaration -> Maybe (L.Ident, (Integer, Fields))
+    convert (DeclClass cls size fs) = Just (cls, (size, fs))
+    convert (DeclFun _ _ _ _) = Nothing
 
 runCompileProgram :: L.Program a -> Program
 runCompileProgram p =
@@ -37,4 +46,4 @@ runCompileProgram p =
 compileProgram :: L.Program a -> Compiler ()
 compileProgram (L.Program _ ts) = do
   ds <- mapM collectDeclaration ts
-  localFunctions (\fs -> M.union fs $ fromDeclarations ds) $ mapM_ compileTopDef ts
+  localClasses (\_ -> classesFromDeclarations ds) $ localFunctions (\fs -> M.union fs $ fromDeclarations ds) $ mapM_ compileTopDef ts

@@ -45,6 +45,7 @@ compileDecl t (L.NoInit a x) = compileDecl t $ L.Init a x (defaultValue t) where
     L.Bool a -> L.ELitFalse a
     L.Str a -> L.EString a "\"\""
     L.Array a t -> L.ENewArr a t (L.ELitInt a 0)
+    L.Class a cls -> L.ENewObj a cls
 
 compileStmt :: forall a. L.Stmt a -> Compiler Env
 compileStmt (L.Empty _) = ask

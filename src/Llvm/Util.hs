@@ -11,6 +11,7 @@ convertType t = case t of
   L.Bool _ -> Ti1
   L.Str _ -> Ptr Ti8
   L.Array _ t -> Array $ convertType t
+  L.Class _ cls -> Object cls
 
 typeSize :: Type -> Integer
 typeSize t = case t of
@@ -20,6 +21,7 @@ typeSize t = case t of
   Ti1 -> 1
   Ptr _ -> typeSize Ti64
   Array _ -> typeSize Ti64
+  Object _ -> typeSize Ti64
   Tvoid -> error "void type has no size"
 
 arrayType :: Type -> Type

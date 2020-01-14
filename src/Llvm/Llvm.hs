@@ -1,8 +1,9 @@
 module Llvm.Llvm where
 
-import qualified Latte.AbsLatte as L
-
 import Data.List
+import qualified Data.Map as M
+
+import qualified Latte.AbsLatte as L
 
 import Util.String
 
@@ -42,7 +43,7 @@ instance Show Type where
   show (Ptr t) = (show t) ++ "*"
 
 -- LLVM values.
-data Value = VInt Integer | VReg Register | VBool Bool | VConst Constant deriving (Eq, Ord)
+data Value = VInt Integer | VReg Register | VBool Bool | VConst Constant | VNull deriving (Eq, Ord)
 instance Show Value where
   show (VInt i) = show i
   show (VReg r) = show r
@@ -50,6 +51,7 @@ instance Show Value where
   show (VConst (Constant i s)) = intercalate "" [
     "getelementptr inbounds ([", len , " x i8], [", len, " x i8]* @const_",
     show i, ", i32 0, i32 0)"] where len = show (1 + length s)
+  show (VNull) = "null"
 
 -- Instructions used in LLVM.
 data Instruction
@@ -148,12 +150,20 @@ instance Show Function where
       showArg :: (Type, Register) -> String
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
+
+-- Class fields.
+type Fields = M.Map L.Ident (Type, Integer)
+
 -- Top definition declaration.
-data Declaration = DeclFun Type L.Ident String [Type] deriving Eq
+data Declaration
+  = DeclFun Type L.Ident String [Type]
+  | DeclClass L.Ident Integer Fields
+  deriving Eq
 instance Show Declaration where
   show (DeclFun r _ f args) =
     "declare " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate "," $ map show args) ++ ")"
+  show (DeclClass _ _ _) = error "unreachable"
 
 -- Program.
 newtype Program = Program ([Declaration], [Constant], [Function]) deriving Eq

@@ -14,7 +14,6 @@ import Llvm.Util
 
 type Variables = M.Map L.Ident (Type, Register)
 type Functions = M.Map L.Ident (Type, String)
-type Fields = M.Map L.Ident (Type, Integer)
 type Classes = M.Map L.Ident (Integer, Fields)
 
 type Env = (Variables, Functions, Classes)

@@ -213,3 +213,5 @@ doCompileExpr (L.ENewObj _ cls) = do
   object <- freshRegister
   emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, VInt size)] (Just object)
   return (Object cls, VReg object)
+doCompileExpr (L.ENullCast _ cls) = do
+  return (Object cls, VNull)
