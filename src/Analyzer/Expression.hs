@@ -37,11 +37,7 @@ analyzeLValue (LAt a x i) = do
     Array _ t -> return t
     otherwise -> throwError $ arrayError a x xt
 analyzeLValue (LAttr a x f) = analyzeExpr x >>= \xt -> case xt of
-  Class _ cls -> do
-    fs <- mustLookupClass a cls
-    case M.lookup f fs of
-      Just t -> return t
-      Nothing -> throwError $ undefinedAttributeError a cls f
+  Class _ cls -> mustLookupField a cls f
   Array _ t -> do
     if f == lengthIdent then
       return $ Int a
@@ -64,6 +60,18 @@ analyzeExpr (EApp a f args) = do
       unless (ts == tts) $ throwError $ argumentsError a f ts tts
       return r
     tt -> throwError $ functionError a f tt
+analyzeExpr (EAttrFun a obj f args) = do
+  t <- analyzeExpr obj
+  case t of
+    Class _ cls -> do
+      fun <- mustLookupField a cls f
+      case fun of
+        Fun _ r ts -> do
+          tts <- mapM analyzeExpr args
+          unless (ts == tts) $ throwError $ argumentsError a f ts tts
+          return r
+        tt -> throwError $ functionError a f tt
+    otherwise -> throwError $ methodError a t
 analyzeExpr (EString a s) = do
   if (length s < 2) || (head s /= '\"') || (last s /= '\"') then
     throwError $ missingQuotesError a

@@ -31,3 +31,6 @@ mainType = let (_, (_, t)) = function (Int ()) "main" [] in t
 
 lengthIdent :: Ident
 lengthIdent = Ident "length"
+
+selfIdent :: Ident
+selfIdent = Ident "self"

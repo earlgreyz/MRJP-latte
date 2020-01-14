@@ -13,6 +13,7 @@ import Latte.ErrLatte
 import Analyzer.Analyzer
 import Analyzer.Assert
 import Analyzer.Error
+import Analyzer.Internal
 import Analyzer.Statement
 
 -- Convert list of arguments into a list of its types.
@@ -30,12 +31,18 @@ insertArgs ((Arg a t arg):args) = do
     Just (True, tt) -> throwError $ redeclaredError a arg (getTypeErrPos tt)
     otherwise -> localVars (const $ M.insert arg (True, t) vs) $ insertArgs args
 
--- Define class attribute.
+-- Insert class fields into the environment.
+insertFields :: Fields -> Vars -> Vars
+insertFields fs vs = M.union vs $ M.map (\t -> (True, t)) fs
+
+-- Define class attribute or method.
 defineField :: Fields -> (Field ErrPos) -> Analyzer Fields
 defineField fs (Attr a t x) = case M.lookup x fs of
   Just tt -> throwError $ redeclaredError a x (getTypeErrPos tt)
   Nothing -> return $ M.insert x t fs
-defineField fs (Method a f) = error "unimplemented yet" -- TODO: implement
+defineField fs (Method _ (FunDef a r f args _)) = case M.lookup f fs of
+  Just tt -> throwError $ redeclaredError a f (getTypeErrPos tt)
+  Nothing -> return $ M.insert f (Fun a r (argTypes args)) fs
 
 -- Collect definition and return environment with added top definitons.
 defineTopDef :: TopDef ErrPos -> Analyzer Env
@@ -59,16 +66,24 @@ defineManyTopDef :: [TopDef ErrPos] -> Analyzer Env
 defineManyTopDef ts =
   ask >>= \start -> foldlM (\env t -> local (const env) $ defineTopDef t) start ts
 
--- Runs static analysis on a top definition.
-analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
-analyzeTopDef (FnDef _ (FunDef a t f args block)) = do
+-- Runs static analysis on function definition.
+analyzeFunction :: FunDef ErrPos -> Analyzer ()
+analyzeFunction (FunDef a t f args block) = do
   modify $ \_ -> False
   vs <- localVars (\vs -> startBlock vs) $ insertArgs args
   localVars (const $ insertRet t vs) $ analyzeBlock block
   ret <- get
   unless (t == Void Nothing || ret) $ throwError $ missingReturnError a f
-analyzeTopDef (ClDef a cls fields) = mapM_ analyzeField fields
 
-analyzeField :: (Field ErrPos) -> Analyzer ()
-analyzeField (Attr a t x) = assertDeclarableType a t x
-analyzeField (Method a f) = error "unimplemented yet" -- TODO: implement
+-- Runs static analysis on class field.
+analyzeField :: Ident -> (Field ErrPos) -> Analyzer ()
+analyzeField _ (Attr a t x) = assertDeclarableType a t x
+analyzeField cls (Method a f) = do
+  (vs, cs) <- ask
+  let vs' = M.insert selfIdent (True, Class a cls) vs
+  localVars (const $ insertFields (cs M.! cls) vs') $ analyzeFunction f
+
+-- Runs static analysis on a top definition.
+analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
+analyzeTopDef (FnDef _ f) = analyzeFunction f
+analyzeTopDef (ClDef a cls fields) = mapM_ (analyzeField cls) fields

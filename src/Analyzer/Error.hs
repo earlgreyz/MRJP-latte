@@ -103,3 +103,7 @@ invalidMainTypeError :: Type ErrPos -> String
 invalidMainTypeError t = intercalate " " [
   (showErrPos $ getTypeErrPos t), "expected main to be of type int()",
   "but got", (show t), "instead"]
+
+methodError :: ErrPos -> Type ErrPos -> String
+methodError a t = intercalate " " [
+  (showErrPos a), "unable to call method on expression of type", (show t)]

@@ -20,3 +20,8 @@ mustLookupClass :: ErrPos -> Ident -> Analyzer Fields
 mustLookupClass a cls = askClasses >>= \cs -> case M.lookup cls cs of
   Nothing -> throwError $ undefinedClassError a cls
   Just fs -> return fs
+
+mustLookupField :: ErrPos -> Ident -> Ident -> Analyzer (Type ErrPos)
+mustLookupField a cls f = mustLookupClass a cls >>= \fs -> case M.lookup f fs of
+  Nothing -> throwError $ undefinedAttributeError a cls f
+  Just t -> return t
