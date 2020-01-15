@@ -1,20 +1,25 @@
 {-# LANGUAGE BlockArguments #-}
 module Llvm.TopDefinition (collectDeclaration, compileTopDef) where
 
-import Control.Monad
+import Data.Foldable
 import qualified Data.Map as M
+
+import Control.Monad
+import Control.Monad.Reader
 
 import qualified Latte.AbsLatte as L
 
 import Llvm.Compiler
+import Llvm.Internal
 import Llvm.Llvm
 import Llvm.Statement
 import Llvm.Util
 
 -- Converts method into standalone function.
 convertMethod :: L.Ident -> L.FunDef a -> L.FunDef a
-convertMethod (L.Ident cls) (L.FunDef a t (L.Ident fident) args block) =
-  L.FunDef a t (L.Ident $ cls ++ "." ++ fident) args block
+convertMethod c@(L.Ident cls) (L.FunDef a t (L.Ident fident) args block) =
+  let self = L.Arg a (L.Class a c) selfIdent in
+    L.FunDef a t (L.Ident $ cls ++ "." ++ fident) (self:args) block
 
 -- Extracts declaration parameters of a function.
 functionDeclaration :: L.FunDef a -> (Type, L.Ident, String, [Type])
@@ -24,34 +29,43 @@ functionDeclaration (L.FunDef _ t fident args _) =
       (rt, fident, convertFunctionName fident, ts)
 
 -- Collect attribute definitons from class fields list.
-collectAttrs :: [L.Field a] -> Integer -> Fields -> (Integer, Fields)
+collectAttrs :: [L.Field a] -> Integer -> Attributes -> (Integer, Attributes)
 collectAttrs [] off fs = (off, fs)
 collectAttrs ((L.Attr _ t x):xs) off fs = let tt = convertType t in
   collectAttrs xs (off + typeSize tt) $ M.insert x (tt, off) fs
 collectAttrs ((L.Method _ _):xs) off fs = collectAttrs xs off fs
 
+collectMethods :: L.Ident -> [L.Field a] -> Methods -> Methods
+collectMethods _ [] ms = ms
+collectMethods cls ((L.Method _ f@(L.FunDef _ _ fident _ _)):xs) ms =
+  let (rt, _, fname, _) = functionDeclaration $ convertMethod cls f in
+    collectMethods cls xs $ M.insert fident (rt, fname) ms
+collectMethods cls ((L.Attr _ _ _):xs) ms = collectMethods cls xs ms
+
 -- Collect method definitons from class fields list.
-collectMethods :: L.Ident -> [L.Field a] -> [Declaration] -> [Declaration]
-collectMethods cls [] ds = ds
-collectMethods cls ((L.Method _ f):xs) ds =
-  let (rt, fident, fname, ts) = functionDeclaration $ convertMethod cls f in
-    collectMethods cls xs (DeclFun rt fident fname ts:ds)
-collectMethods cls ((L.Attr _ _ _):xs) ds = collectMethods cls xs ds
+collectMethodDeclaration :: L.Ident -> L.Field a -> Compiler Functions
+collectMethodDeclaration cls (L.Method _ f) = do
+  fs <- askFunctions
+  let (rt, fident, fname, ts) = functionDeclaration $ convertMethod cls f
+  return $ M.insert fident (rt, fname) fs
+collectMethodDeclaration cls (L.Attr _ _ _) = askFunctions
 
 -- Collect declarations from top definitions.
-collectDeclaration :: L.TopDef a -> Compiler [Declaration]
-collectDeclaration (L.FnDef _ f) = do
-  let (rt, fident, fname, ts) = functionDeclaration f
-  return [DeclFun rt fident fname ts]
-collectDeclaration (L.ClDef _ cls fields) = do
-  let (size, fs) = collectAttrs fields 0 M.empty
-  let ms = collectMethods cls fields []
-  return ((DeclClass cls size fs):ms)
-collectDeclaration (L.ClExtDef _ cls base fields) = askClasses >>= \cs -> do
-  let (size, fs) = cs M.! cls
-  let (size', fs') = collectAttrs fields size fs
-  let ms = collectMethods cls fields []
-  return ((DeclClass cls size' fs'):ms)
+collectDeclaration :: L.TopDef a -> Compiler Env
+collectDeclaration (L.FnDef _ f) = ask >>= \(vs, fs, cs) -> do
+  let (rt, fident, fname, _) = functionDeclaration f
+  return (vs, M.insert fident (rt, fname) fs, cs)
+collectDeclaration (L.ClDef _ cls fields) = ask >>= \(vs, fs, cs) -> do
+  let (size, as) = collectAttrs fields 0 M.empty
+  let ms = collectMethods cls fields M.empty
+  fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
+  return (vs, fs, M.insert cls (size, as, ms) cs)
+collectDeclaration (L.ClExtDef _ cls base fields) = ask >>= \(vs, fs, cs) -> do
+  let (size, as, ms) = cs M.! base
+  let (size', as') = collectAttrs fields size as
+  let ms' = collectMethods cls fields ms
+  fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
+  return (vs, fs, M.insert cls (size', as', ms') cs)
 
 compileFunction :: L.FunDef a -> Compiler ()
 compileFunction f@(L.FunDef _ t _ args block) = do
@@ -94,3 +108,4 @@ compileMethod cls (L.Method _ f) = compileFunction $ convertMethod cls f
 compileTopDef :: L.TopDef a -> Compiler ()
 compileTopDef (L.FnDef _ f) = compileFunction f
 compileTopDef (L.ClDef _ cls fields) = mapM_ (compileMethod cls) fields
+compileTopDef (L.ClExtDef _ cls _ fields) = mapM_ (compileMethod cls) fields

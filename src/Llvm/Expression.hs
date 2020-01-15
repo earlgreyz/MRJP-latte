@@ -35,9 +35,9 @@ arrayOffset t index = case index of
 
 -- Returns register storing lvalue pointer.
 getValuePointer :: (L.LValue a) -> Compiler (Type, Register)
-getValuePointer (L.LVar _ x) = do
-  vs <- askVariables
-  return $ vs M.! x
+getValuePointer (L.LVar a x) = askVariables >>= \vs -> case M.lookup x vs of
+  Just (t, r) -> return (t, r)
+  Nothing -> getValuePointer $ L.LAttr a (L.EVar a $ L.LVar a selfIdent) x
 getValuePointer (L.LAt _ x e) = do
   -- Index.
   (_, i) <- compileExpr e
@@ -62,8 +62,8 @@ getValuePointer (L.LAttr _ x a) = do
     Object cls -> do
       cs <- askClasses
       -- Offset in the struct.
-      let (_, fields) = cs M.! cls
-      let (t, offset) = fields M.! a
+      let (_, as, _) = cs M.! cls
+      let (t, offset) = as M.! a
       -- Pointer to the attribute.
       attribute <- freshRegister
       emitInstruction $ IGetElementPtr Ti8 ptr (VInt offset) attribute
@@ -90,6 +90,20 @@ doCompileExpr (L.EApp _ f args) = do
     _ -> do
       reg <- freshRegister
       emitInstruction $ ICall rt fname xs (Just reg)
+      return (rt, VReg reg)
+doCompileExpr (L.EAttrFun _ obj f args) = do
+  (t, v) <- compileExpr obj
+  xs <- mapM compileExpr args
+  cs <- askClasses
+  let (_, _, ms) = cs M.! (className t)
+  let (rt, fname) = ms M.! f
+  case rt of
+    Tvoid -> do
+      emitInstruction $ ICall rt fname ((t, v):xs) Nothing
+      return (Tvoid, VInt 0)
+    _ -> do
+      reg <- freshRegister
+      emitInstruction $ ICall rt fname ((t, v):xs) (Just reg)
       return (rt, VReg reg)
 doCompileExpr (L.Neg _ e) = do
   (_, v) <- compileExpr e
@@ -209,9 +223,12 @@ doCompileExpr (L.ENewArr _ t e) = do
   return (Array innerType, VReg array)
 doCompileExpr (L.ENewObj _ cls) = do
   cs <- askClasses
-  let (size, _) = cs M.! cls
+  let (size, _, _) = cs M.! cls
   object <- freshRegister
   emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, VInt size)] (Just object)
   return (Object cls, VReg object)
 doCompileExpr (L.ENullCast _ cls) = do
   return (Object cls, VNull)
+doCompileExpr (L.ECast _ _ x) = do
+  (t, r) <- compileExpr x
+  return (t, r)

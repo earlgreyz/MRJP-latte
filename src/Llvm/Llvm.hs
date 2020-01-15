@@ -150,20 +150,21 @@ instance Show Function where
       showArg :: (Type, Register) -> String
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
-
 -- Class fields.
-type Fields = M.Map L.Ident (Type, Integer)
+type Attributes = M.Map L.Ident (Type, Integer)
+-- Class methods.
+type Methods = M.Map L.Ident (Type, String)
 
 -- Top definition declaration.
 data Declaration
   = DeclFun Type L.Ident String [Type]
-  | DeclClass L.Ident Integer Fields
+  | DeclClass L.Ident Integer Attributes Methods
   deriving Eq
 instance Show Declaration where
   show (DeclFun r _ f args) =
     "declare " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate "," $ map show args) ++ ")"
-  show (DeclClass _ _ _) = error "unreachable"
+  show (DeclClass _ _ _ _) = error "unreachable"
 
 -- Program.
 newtype Program = Program ([Declaration], [Constant], [Function]) deriving Eq

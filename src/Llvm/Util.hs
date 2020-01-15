@@ -29,6 +29,11 @@ arrayType t = case t of
   Array t -> t
   otherwise -> error "expected array type"
 
+className :: Type -> L.Ident
+className t = case t of
+  Object cls -> cls
+  otherwise -> error "expected object type"
+
 convertFunctionName :: L.Ident -> String
 convertFunctionName (L.Ident s) =
   if s == "main" then s else "_" ++ s
