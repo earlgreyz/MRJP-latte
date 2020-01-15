@@ -38,14 +38,14 @@ declare :: Type ErrPos -> Item ErrPos -> Analyzer Vars
 declare t (NoInit a x) = do
   vs <- askVars
   assertNotRedeclared a x
-  assertNotClass a x
+  assertClassNotRedeclared a x
   return $ M.insert x (True, t) vs
 declare t (Init a x e) = do
   vs <- askVars
   assertNotRedeclared a x
-  assertNotClass a x
+  assertClassNotRedeclared a x
   tt <- analyzeExpr e
-  unless (t == tt) $ throwError $ typeMismatchError tt x t
+  assertCanAssignType a (LVar a x) t tt
   return $ M.insert x (True, t) vs
 
 -- Special marker for the return environment.
@@ -81,7 +81,7 @@ analyzeStmt (Decl a t (x:xs)) = do
 analyzeStmt (Ass a x e) = do
   t <- analyzeLValue x
   tt <- analyzeExpr e
-  unless (t == tt) $ throwError $ typeMismatchError tt x t
+  assertCanAssignType a x t tt
   askVars
 analyzeStmt (Incr a x) = do
   t <- analyzeLValue x

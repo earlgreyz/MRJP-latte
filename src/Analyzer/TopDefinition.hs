@@ -1,6 +1,7 @@
 module Analyzer.TopDefinition where
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -15,6 +16,7 @@ import Analyzer.Assert
 import Analyzer.Error
 import Analyzer.Internal
 import Analyzer.Statement
+import Analyzer.Util
 
 -- Convert list of arguments into a list of its types.
 argTypes :: [Arg ErrPos] -> [Type ErrPos]
@@ -53,13 +55,18 @@ defineTopDef (FnDef _ (FunDef a r f args _)) = do
     Nothing -> return ()
   let ft = Fun a r (argTypes args)
   return (M.insert f (True, ft) vs, cs)
-defineTopDef (ClDef a cls attrs) = do
+defineTopDef (ClDef a cls fields) = do
   (vs, cs) <- ask
-  case M.lookup cls cs of
-    Just _ -> throwError $ classRedeclaredError a cls
-    Nothing -> return ()
-  fs <- foldM defineField M.empty attrs
-  return (vs, M.insert cls fs cs)
+  assertClassNotRedeclared a cls
+  fs <- foldM defineField M.empty fields
+  return (vs, M.insert cls (S.singleton cls, fs) cs)
+defineTopDef (ClExtDef a cls base fields) = do
+  (vs, cs) <- ask
+  assertClassNotRedeclared a cls
+  (bs, fs) <- mustLookupClass a base
+  fs' <- foldM defineField fs fields
+  let bs' = S.insert cls bs
+  return (vs, M.insert cls (bs', fs') cs)
 
 -- Iterate through a list of top definitions and insert them into the environment.
 defineManyTopDef :: [TopDef ErrPos] -> Analyzer Env
@@ -81,9 +88,11 @@ analyzeField _ (Attr a t x) = assertDeclarableType a t x
 analyzeField cls (Method a f) = do
   (vs, cs) <- ask
   let vs' = M.insert selfIdent (True, Class a cls) vs
-  localVars (const $ insertFields (cs M.! cls) vs') $ analyzeFunction f
+  let (_, fs) = cs M.! cls
+  localVars (const $ insertFields fs vs') $ analyzeFunction f
 
 -- Runs static analysis on a top definition.
 analyzeTopDef :: (TopDef ErrPos) -> Analyzer ()
 analyzeTopDef (FnDef _ f) = analyzeFunction f
 analyzeTopDef (ClDef a cls fields) = mapM_ (analyzeField cls) fields
+analyzeTopDef (ClExtDef a cls _ fields) = mapM_ (analyzeField cls) fields

@@ -1,6 +1,7 @@
 module Analyzer.Assert where
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -21,8 +22,8 @@ assertNotRedeclared a x = do
     otherwise -> return ()
 
 -- Assert identifier is not a class definition.
-assertNotClass :: ErrPos -> Ident -> Analyzer ()
-assertNotClass a c = do
+assertClassNotRedeclared :: ErrPos -> Ident -> Analyzer ()
+assertClassNotRedeclared a c = do
   cs <- askClasses
   case M.lookup c cs of
     Just _ -> throwError $ classRedeclaredError a c
@@ -46,3 +47,11 @@ assertType a t tt = do
 assertOneOfType :: ErrPos -> [Type ErrPos] -> Type ErrPos -> Analyzer ()
 assertOneOfType a ts t = do
   unless (any ((==) t) ts) $ throwError $ oneOfTypeExpectedError a ts t
+
+assertCanAssignType :: ErrPos -> LValue ErrPos -> Type ErrPos -> Type ErrPos -> Analyzer ()
+assertCanAssignType a x t tt = case (t, tt) of
+  (Class _ to, Class _ from) -> do
+    (bs, _) <- mustLookupClass a from
+    unless (to `S.member` bs) $ throwError $ typeMismatchError tt x t
+  otherwise -> do
+    unless (t == tt) $ throwError $ typeMismatchError tt x t

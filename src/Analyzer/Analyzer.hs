@@ -1,6 +1,7 @@
 module Analyzer.Analyzer where
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -17,8 +18,8 @@ type AnalyzerType = (Bool, Type ErrPos)
 type Vars = M.Map Ident AnalyzerType
 -- Mapping of class fields to types.
 type Fields = M.Map Ident (Type ErrPos)
--- Mapping of class names to its field definitions
-type Classes = M.Map Ident Fields
+-- Mapping of class names to its parent classes and field definitions
+type Classes = M.Map Ident (S.Set Ident, Fields)
 
 type Env = (Vars, Classes)
 
