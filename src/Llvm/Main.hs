@@ -46,4 +46,6 @@ runCompileProgram p =
 compileProgram :: L.Program a -> Compiler ()
 compileProgram (L.Program _ ts) = do
   ds <- mapM collectDeclaration ts
-  localClasses (\_ -> classesFromDeclarations ds) $ localFunctions (\fs -> M.union fs $ fromDeclarations ds) $ mapM_ compileTopDef ts
+  let cs = classesFromDeclarations $ concat ds
+  let fs = fromDeclarations $ concat ds
+  localClasses (const cs) $ localFunctions (M.union fs) $ mapM_ compileTopDef ts
