@@ -20,6 +20,7 @@ tryEval (ELitInt _ n) = return $ VInt n
 tryEval (ELitTrue _) = return $ VBool True
 tryEval (ELitFalse _) = return $ VBool False
 tryEval (EApp _ _ _) = Nothing
+tryEval (EAttrFun _ _ _ _) = Nothing
 tryEval (EString a s) = return $ VString (unquote s)
 tryEval (Neg _ e) = tryEval e >>= \v -> requireInt v >>= \n -> return $ VInt $ -n
 tryEval (Not _ e) = tryEval e >>= \v -> requireBool v >>= \b -> return $ VBool $ not b
