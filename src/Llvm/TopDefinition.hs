@@ -55,17 +55,20 @@ collectDeclaration :: L.TopDef a -> Compiler Env
 collectDeclaration (L.FnDef _ f) = ask >>= \(vs, fs, cs) -> do
   let (rt, fident, fname, _) = functionDeclaration f
   return (vs, M.insert fident (rt, fname) fs, cs)
-collectDeclaration (L.ClDef _ cls fields) = ask >>= \(vs, fs, cs) -> do
-  let (size, as) = collectAttrs fields 0 M.empty
+collectDeclaration (L.ClDef _ cls@(L.Ident c) fields) = ask >>= \(vs, fs, cs) -> do
+  -- First bytes are used for storing the class name.
+  let (size, as) = collectAttrs fields (typeSize $ Ptr Ti8) M.empty
   let ms = collectMethods cls fields M.empty
   fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
-  return (vs, fs, M.insert cls (size, as, ms) cs)
-collectDeclaration (L.ClExtDef _ cls base fields) = ask >>= \(vs, fs, cs) -> do
-  let (size, as, ms) = cs M.! base
+  name <- newConstant c
+  return (vs, fs, M.insert cls (size, name, as, ms) cs)
+collectDeclaration (L.ClExtDef _ cls@(L.Ident c) base fields) = ask >>= \(vs, fs, cs) -> do
+  let (size, _, as, ms) = cs M.! base
   let (size', as') = collectAttrs fields size as
   let ms' = collectMethods cls fields ms
   fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
-  return (vs, fs, M.insert cls (size', as', ms') cs)
+  name <- newConstant c
+  return (vs, fs, M.insert cls (size', name, as', ms') cs)
 
 compileFunction :: L.FunDef a -> Compiler ()
 compileFunction f@(L.FunDef _ t _ args block) = do

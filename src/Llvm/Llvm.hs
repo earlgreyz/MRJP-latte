@@ -154,17 +154,15 @@ instance Show Function where
 type Attributes = M.Map L.Ident (Type, Integer)
 -- Class methods.
 type Methods = M.Map L.Ident (Type, String)
+-- Class defined as (size, name, attributes, methods).
+type Class = (Integer, Constant, Attributes, Methods)
 
 -- Top definition declaration.
-data Declaration
-  = DeclFun Type L.Ident String [Type]
-  | DeclClass L.Ident Integer Attributes Methods
-  deriving Eq
+data Declaration = Declaration Type L.Ident String [Type] deriving Eq
 instance Show Declaration where
-  show (DeclFun r _ f args) =
+  show (Declaration r _ f args) =
     "declare " ++ show r ++ " @" ++ f ++
     "(" ++ (intercalate "," $ map show args) ++ ")"
-  show (DeclClass _ _ _ _) = error "unreachable"
 
 -- Program.
 newtype Program = Program ([Declaration], [Constant], [Function]) deriving Eq

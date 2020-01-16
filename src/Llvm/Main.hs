@@ -17,18 +17,10 @@ import Llvm.Llvm
 import Llvm.TopDefinition
 
 fromDeclarations :: [Declaration] -> Functions
-fromDeclarations ds = M.fromList $ mapMaybe convert ds
+fromDeclarations ds = M.fromList $ map convert ds
   where
-    convert :: Declaration -> Maybe (L.Ident, (Type, String))
-    convert (DeclFun rt ident fname _) = Just (ident, (rt, fname))
-    convert (DeclClass _ _ _ _) = Nothing
-
-classesFromDeclarations :: [Declaration] -> Classes
-classesFromDeclarations ds = M.fromList $ mapMaybe convert ds
-  where
-    convert :: Declaration -> Maybe (L.Ident, (Integer, Attributes, Methods))
-    convert (DeclClass cls size as ms) = Just (cls, (size, as, ms))
-    convert (DeclFun _ _ _ _) = Nothing
+    convert :: Declaration -> (L.Ident, (Type, String))
+    convert (Declaration rt ident fname _) = (ident, (rt, fname))
 
 runCompileProgram :: L.Program a -> Program
 runCompileProgram p =

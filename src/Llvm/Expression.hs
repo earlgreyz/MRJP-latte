@@ -62,7 +62,7 @@ getValuePointer (L.LAttr _ x a) = do
     Object cls -> do
       cs <- askClasses
       -- Offset in the struct.
-      let (_, as, _) = cs M.! cls
+      let (_, _, as, _) = cs M.! cls
       let (t, offset) = as M.! a
       -- Pointer to the attribute.
       attribute <- freshRegister
@@ -95,7 +95,7 @@ doCompileExpr (L.EAttrFun _ obj f args) = do
   (t, v) <- compileExpr obj
   xs <- mapM compileExpr args
   cs <- askClasses
-  let (_, _, ms) = cs M.! (className t)
+  let (_, _, _, ms) = cs M.! (className t)
   let (rt, fname) = ms M.! f
   case rt of
     Tvoid -> do
@@ -223,9 +223,13 @@ doCompileExpr (L.ENewArr _ t e) = do
   return (Array innerType, VReg array)
 doCompileExpr (L.ENewObj _ cls) = do
   cs <- askClasses
-  let (size, _, _) = cs M.! cls
+  let (size, name, _, _) = cs M.! cls
   object <- freshRegister
   emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, VInt size)] (Just object)
+  -- Store the class name at the beggining of the struct.
+  objectName <- freshRegister
+  emitInstruction $ IBitcast (Ptr Ti8) (VReg object) (Ptr $ Ptr Ti8) objectName
+  emitInstruction $ IStore (Ptr Ti8) (VConst name) objectName
   return (Object cls, VReg object)
 doCompileExpr (L.ENullCast _ cls) = do
   return (Object cls, VNull)
