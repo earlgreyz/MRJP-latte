@@ -43,8 +43,10 @@ defineField fs (Attr a t x) = case M.lookup x fs of
   Just tt -> throwError $ redeclaredError a x (getTypeErrPos tt)
   Nothing -> return $ M.insert x t fs
 defineField fs (Method _ (FunDef a r f args _)) = case M.lookup f fs of
-  Just tt -> throwError $ redeclaredError a f (getTypeErrPos tt)
-  Nothing -> return $ M.insert f (Fun a r (argTypes args)) fs
+  Just tt -> if (tt == ft) then return fs else throwError $ redeclaredError a f (getTypeErrPos tt)
+  Nothing -> return $ M.insert f ft fs
+  where
+    ft = Fun a r (argTypes args)
 
 -- Collect definition and return environment with added top definitons.
 defineTopDef :: TopDef ErrPos -> Analyzer Env
