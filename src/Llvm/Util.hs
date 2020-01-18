@@ -22,6 +22,7 @@ typeSize t = case t of
   Ptr _ -> typeSize Ti64
   Array _ -> typeSize Ti64
   Object _ -> typeSize Ti64
+  Fun _ _ -> typeSize Ti64
   Tvoid -> error "void type has no size"
 
 arrayType :: Type -> Type
@@ -33,6 +34,11 @@ className :: Type -> L.Ident
 className t = case t of
   Object cls -> cls
   otherwise -> error "expected object type"
+
+returnType :: Type -> Type
+returnType t = case t of
+  Fun r _ -> r
+  otherwise -> error "expected function type"
 
 convertFunctionName :: L.Ident -> String
 convertFunctionName (L.Ident s) =

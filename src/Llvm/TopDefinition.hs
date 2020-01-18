@@ -29,11 +29,19 @@ functionDeclaration (L.FunDef _ t fident args _) =
       (rt, fident, convertFunctionName fident, ts)
 
 -- Collect attribute definitons from class fields list.
-collectAttrs :: [L.Field a] -> Integer -> Attributes -> (Integer, Attributes)
+collectAttrs :: [L.Field a] -> Integer -> Fields -> (Integer, Fields)
 collectAttrs [] off fs = (off, fs)
 collectAttrs ((L.Attr _ t x):xs) off fs = let tt = convertType t in
   collectAttrs xs (off + typeSize tt) $ M.insert x (tt, off) fs
-collectAttrs ((L.Method _ _):xs) off fs = collectAttrs xs off fs
+collectAttrs ((L.Method _ (L.FunDef _ rt x args _)):xs) off fs =
+  -- Skip override methods.
+  if x `M.member` fs then
+    collectAttrs xs off fs
+  else
+    collectAttrs xs (off + typeSize tt) $ M.insert x (tt, off) fs
+  where
+    tt :: Type
+    tt = Fun (convertType rt) $ (Ptr Ti8):(map (\(L.Arg _ t _) -> convertType t) args)
 
 collectMethods :: L.Ident -> [L.Field a] -> Methods -> Methods
 collectMethods _ [] ms = ms
@@ -56,19 +64,16 @@ collectDeclaration (L.FnDef _ f) = ask >>= \(vs, fs, cs) -> do
   let (rt, fident, fname, _) = functionDeclaration f
   return (vs, M.insert fident (rt, fname) fs, cs)
 collectDeclaration (L.ClDef _ cls@(L.Ident c) fields) = ask >>= \(vs, fs, cs) -> do
-  -- First bytes are used for storing the class name.
-  let (size, as) = collectAttrs fields (typeSize $ Ptr Ti8) M.empty
+  let (size, as) = collectAttrs fields 0 M.empty
   let ms = collectMethods cls fields M.empty
   fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
-  name <- newConstant c
-  return (vs, fs, M.insert cls (size, name, as, ms) cs)
+  return (vs, fs, M.insert cls (size, as, ms) cs)
 collectDeclaration (L.ClExtDef _ cls@(L.Ident c) base fields) = ask >>= \(vs, fs, cs) -> do
-  let (size, _, as, ms) = cs M.! base
+  let (size, as, ms) = cs M.! base
   let (size', as') = collectAttrs fields size as
   let ms' = collectMethods cls fields ms
   fs' <- foldlM (\fs f -> localFunctions (const fs) $ collectMethodDeclaration cls f) fs fields
-  name <- newConstant c
-  return (vs, fs, M.insert cls (size', name, as', ms') cs)
+  return (vs, fs, M.insert cls (size', as', ms') cs)
 
 compileFunction :: L.FunDef a -> Compiler ()
 compileFunction f@(L.FunDef _ t _ args block) = do

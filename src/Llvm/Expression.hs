@@ -62,7 +62,7 @@ getValuePointer (L.LAttr _ x a) = do
     Object cls -> do
       cs <- askClasses
       -- Offset in the struct.
-      let (_, _, as, _) = cs M.! cls
+      let (_, as, _) = cs M.! cls
       let (t, offset) = as M.! a
       -- Pointer to the attribute.
       attribute <- freshRegister
@@ -85,25 +85,34 @@ doCompileExpr (L.EApp _ f args) = do
   let (rt, fname) = fs M.! f
   case rt of
     Tvoid -> do
-      emitInstruction $ ICall rt fname xs Nothing
+      emitInstruction $ ICall rt (CallName fname) xs Nothing
       return (Tvoid, VInt 0)
     _ -> do
       reg <- freshRegister
-      emitInstruction $ ICall rt fname xs (Just reg)
+      emitInstruction $ ICall rt (CallName fname) xs (Just reg)
       return (rt, VReg reg)
 doCompileExpr (L.EAttrFun _ obj f args) = do
   (t, v) <- compileExpr obj
-  xs <- mapM compileExpr args
   cs <- askClasses
-  let (_, _, _, ms) = cs M.! (className t)
-  let (rt, fname) = ms M.! f
+  let (_, as, _) = cs M.! (className t)
+  let (ft, offset) = as M.! f
+  -- Load function pointer.
+  ptr <- freshRegister
+  emitInstruction $ IGetElementPtr Ti8 v (VInt offset) ptr
+  fptr <- freshRegister
+  emitInstruction $ IBitcast (Ptr Ti8) (VReg ptr) (Ptr ft) fptr
+  fun <- freshRegister
+  emitInstruction $ ILoad ft (VReg fptr) fun
+  -- Call function.
+  xs <- mapM compileExpr args
+  let rt = returnType ft
   case rt of
     Tvoid -> do
-      emitInstruction $ ICall rt fname ((t, v):xs) Nothing
+      emitInstruction $ ICall rt (CallReg fun) ((t, v):xs) Nothing
       return (Tvoid, VInt 0)
     _ -> do
       reg <- freshRegister
-      emitInstruction $ ICall rt fname ((t, v):xs) (Just reg)
+      emitInstruction $ ICall rt (CallReg fun) ((t, v):xs) (Just reg)
       return (rt, VReg reg)
 doCompileExpr (L.Neg _ e) = do
   (_, v) <- compileExpr e
@@ -133,7 +142,7 @@ doCompileExpr (L.EAdd _ e op f) = do
   reg <- freshRegister
   -- Strings `+` has to be handled seperately.
   if tv == Ptr Ti8 then do
-    emitInstruction $ ICall (Ptr Ti8) stringsConcat [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
+    emitInstruction $ ICall (Ptr Ti8) (CallName stringsConcat) [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
     return (Ptr Ti8, VReg reg)
   else do
     emitInstruction $ IArithm (convertAddOp op) v w reg
@@ -149,7 +158,7 @@ doCompileExpr (L.ERel _ e op f) = do
   reg <- freshRegister
   -- Strings comparison has to be handled seperately.
   if tv == Ptr Ti8 then do
-    emitInstruction $ ICall (Ptr Ti8) stringsEqual [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
+    emitInstruction $ ICall (Ptr Ti8) (CallName stringsEqual) [(Ptr Ti8, v), (Ptr Ti8, w)] (Just reg)
     -- If `\=` we need to negate the result.
     case op of
       L.NE _ -> do
@@ -215,7 +224,7 @@ doCompileExpr (L.ENewArr _ t e) = do
   -- Allocate array as bytes to store the size in front of the data.
   size <- arrayOffset innerType len
   array <- freshRegister
-  emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, size)] (Just array)
+  emitInstruction $ ICall (Ptr Ti8) (CallName malloc) [(Ti32, size)] (Just array)
   -- Store the size.
   sizeLocation <- freshRegister
   emitInstruction $ IBitcast (Ptr Ti8) (VReg array) (Ptr Ti32) sizeLocation
@@ -223,14 +232,20 @@ doCompileExpr (L.ENewArr _ t e) = do
   return (Array innerType, VReg array)
 doCompileExpr (L.ENewObj _ cls) = do
   cs <- askClasses
-  let (size, name, _, _) = cs M.! cls
+  let (size, as, ms) = cs M.! cls
   object <- freshRegister
-  emitInstruction $ ICall (Ptr Ti8) malloc [(Ti32, VInt size)] (Just object)
-  -- Store the class name at the beggining of the struct.
-  objectName <- freshRegister
-  emitInstruction $ IBitcast (Ptr Ti8) (VReg object) (Ptr $ Ptr Ti8) objectName
-  emitInstruction $ IStore (Ptr Ti8) (VConst name) objectName
+  emitInstruction $ ICall (Ptr Ti8) (CallName malloc) [(Ti32, VInt size)] (Just object)
+  mapM_ (initializeMethod as object) (M.toList ms)
   return (Object cls, VReg object)
+  where
+    initializeMethod :: Fields -> Register -> (L.Ident, (Type, String)) -> Compiler ()
+    initializeMethod fs object (fident, (_, fname)) = do
+      let (t, offset) = fs M.! fident
+      ptr <- freshRegister
+      emitInstruction $ IGetElementPtr Ti8 (VReg object) (VInt offset) ptr
+      fun <- freshRegister
+      emitInstruction $ IBitcast (Ptr Ti8) (VReg ptr) (Ptr t) fun
+      emitInstruction $ IStoreFunc t fname fun
 doCompileExpr (L.ENullCast _ cls) = do
   return (Object cls, VNull)
 doCompileExpr (L.ECast _ _ x) = do

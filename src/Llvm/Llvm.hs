@@ -31,7 +31,10 @@ instance Show Constant where
     show (1 + length s), " x i8] c\"", escape s, "\\00\", align 1" ]
 
 -- LLVM types.
-data Type = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type | Array Type | Object L.Ident deriving (Eq, Ord)
+data Type
+  = Ti64 | Ti32 | Ti8 | Ti1 | Tvoid | Ptr Type
+  | Array Type | Object L.Ident | Fun Type [Type]
+  deriving (Eq, Ord)
 instance Show Type where
   show Ti64 = "i64"
   show Ti32 = "i32"
@@ -40,6 +43,7 @@ instance Show Type where
   show Tvoid = "void"
   show (Array _) = show (Ptr Ti8)
   show (Object _) = show (Ptr Ti8)
+  show (Fun t ts) = (show t) ++ " (" ++ (intercalate ", " $ map show ts) ++ ")*"
   show (Ptr t) = (show t) ++ "*"
 
 -- LLVM values.
@@ -53,9 +57,15 @@ instance Show Value where
     show i, ", i32 0, i32 0)"] where len = show (1 + length s)
   show (VNull) = "null"
 
+-- Function name or a function pointer.
+data Callable = CallName String | CallReg Register deriving (Eq, Ord)
+instance Show Callable where
+  show (CallName f) = "@" ++ f
+  show (CallReg r) = show r
+
 -- Instructions used in LLVM.
 data Instruction
-  = ICall Type String [(Type, Value)] (Maybe Register)
+  = ICall Type Callable [(Type, Value)] (Maybe Register)
   | IRet Type Value
   | IArithm ArithmOp Value Value Register
   | IBr Label
@@ -63,6 +73,7 @@ data Instruction
   | ILabel Label
   | ILoad Type Value Register
   | IStore Type Value Register
+  | IStoreFunc Type String Register
   | IAlloca Type Register
   | IIcmp Cond Type Value Value Register
   | IPhi Type [(Value, Label)] Register
@@ -72,7 +83,7 @@ data Instruction
   deriving Eq
 instance Show Instruction where
   show (ICall rt f args res) = intercalate "" [
-    showRes res, "call ", show rt, " @", f, " (",
+    showRes res, "call ", show rt, " ", show f, " (",
     intercalate ", " $ map showArg args, ")"]
     where
       showRes :: Maybe Register -> String
@@ -91,6 +102,8 @@ instance Show Instruction where
     show res ++ " = load " ++ show t ++ ", " ++ show (Ptr t) ++ " " ++ show addr
   show (IStore t v res) = intercalate " " [
     "store", show t, show v ++ ",", show (Ptr t), show res]
+  show (IStoreFunc t f res) = intercalate " " [
+    "store", show t, "@" ++ f ++ ",", show (Ptr t), show res]
   show (IAlloca t res) = show res ++ " = alloca " ++ show t
   show (IIcmp cond t v w res) = intercalate " " [
     show res, "= icmp", show cond, show t, show v ++ ",", show w]
@@ -151,11 +164,11 @@ instance Show Function where
       showArg (t, r) = (show t) ++ " " ++ (show r)
 
 -- Class fields.
-type Attributes = M.Map L.Ident (Type, Integer)
--- Class methods.
+type Fields = M.Map L.Ident (Type, Integer)
+-- Class methods (type, name).
 type Methods = M.Map L.Ident (Type, String)
--- Class defined as (size, name, attributes, methods).
-type Class = (Integer, Constant, Attributes, Methods)
+-- Class defined as (size, attributes, methods).
+type Class = (Integer, Fields, Methods)
 
 -- Top definition declaration.
 data Declaration = Declaration Type L.Ident String [Type] deriving Eq
