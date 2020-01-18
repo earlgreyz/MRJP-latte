@@ -9,12 +9,16 @@ import Llvm.Llvm
 -- Registers accessed in the instruction.
 accessedRegisters :: Instruction -> S.Set Register
 accessedRegisters i = case i of
-  ICall _ _ args _ -> S.fromList $ mapMaybe (toRegister . snd) args
+  ICall _ f args _ -> let s = S.fromList $ mapMaybe (toRegister . snd) args in
+    case f of
+      CallReg r -> S.insert r s
+      otherwise -> s
   IRet _ x -> S.fromList $ mapMaybe toRegister [x]
   IArithm _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   IBrCond x _ _ -> S.fromList $ mapMaybe toRegister [x]
   ILoad _ x _ -> S.fromList $ mapMaybe toRegister [x]
   IStore _ x r -> S.fromList (r:mapMaybe toRegister [x])
+  IStoreFunc _ _ r -> S.singleton r
   IIcmp _ _ x y _ -> S.fromList $ mapMaybe toRegister [x, y]
   IPhi _ args _ -> S.fromList $ mapMaybe (toRegister . fst) args
   IBitcast _ x _ _ -> S.fromList $ mapMaybe toRegister [x]
