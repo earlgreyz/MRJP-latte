@@ -64,15 +64,21 @@ tryEval (ERel _ e op f) = do
 tryEval (EAnd _ e f) = do
   v <- tryEval e
   b <- requireBool v
-  w <- tryEval f
-  c <- requireBool w
-  return $ VBool $ b && c
+  if (not b) then
+    return $ VBool False
+  else do
+    w <- tryEval f
+    c <- requireBool w
+    return $ VBool $ b && c
 tryEval (EOr _ e f) = do
   v <- tryEval e
   b <- requireBool v
-  w <- tryEval f
-  c <- requireBool w
-  return $ VBool $ b || c
+  if b then
+    return $ VBool True
+  else do
+    w <- tryEval f
+    c <- requireBool w
+    return $ VBool $ b || c
 tryEval (ENewArr _ _ _) = Nothing
 tryEval (ENewObj _ _) = Nothing
 tryEval (ENullCast _ _) = Nothing
